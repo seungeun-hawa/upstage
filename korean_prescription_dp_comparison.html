@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회전된 한국 처방전 DP 실측 비교 — Upstage DP Standard vs Corepin DP</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-alt: #f5f5f3;
+    --border: #e5e5e0;
+    --border-strong: #d4d4cf;
+    --text: #1a1a1a;
+    --text-muted: #6b6b66;
+    --text-faint: #999994;
+    --accent: #534AB7;
+    --accent-bg: #EEEDFE;
+    --success: #0F6E56;
+    --success-bg: #E1F5EE;
+    --danger: #A32D2D;
+    --danger-bg: #FCEBEB;
+    --warning: #854F0B;
+    --warning-bg: #FAEEDA;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 48px 32px 64px; }
+
+  header { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; }
+  .eyebrow { display: inline-block; font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); background: var(--accent-bg);
+    padding: 4px 10px; border-radius: 4px; margin-bottom: 12px; }
+  h1 { font-size: 26px; font-weight: 500; margin: 0 0 8px; line-height: 1.3; }
+  .subtitle { color: var(--text-muted); font-size: 14px; margin: 0; }
+  .meta-line { display: flex; gap: 20px; font-size: 12px; color: var(--text-faint); margin-top: 16px; flex-wrap: wrap; }
+  .meta-line span strong { color: var(--text-muted); font-weight: 500; }
+
+  h2 { font-size: 16px; font-weight: 500; margin: 40px 0 16px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border); }
+  h3.sub { font-size: 13px; font-weight: 500; margin: 24px 0 10px; color: var(--text-muted); }
+
+  table.metrics { width: 100%; border-collapse: collapse; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 13px; }
+  table.metrics th { text-align: left; padding: 14px 16px; background: var(--surface-alt);
+    font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+  table.metrics th.metric-col { width: 220px; }
+  table.metrics td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.metrics tr:last-child td { border-bottom: none; }
+  table.metrics td.label { color: var(--text-muted); font-size: 12px; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 3px 8px;
+    border-radius: 4px; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .badge.upstage { background: #1a1a1a; color: #fff; }
+  .badge.corepin { background: #fff; color: #1a1a1a; border: 1px solid var(--border-strong); }
+  .col-header { font-weight: 500; font-size: 14px; }
+  .endpoint { font-size: 11px; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 2px; }
+
+  .pos { color: var(--success); font-weight: 500; }
+  .neg { color: var(--danger); }
+  .faint { color: var(--text-faint); }
+
+  /* 비교 카드 (좌/우 병렬) */
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+  .compare-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 20px; }
+  .compare-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .compare-head .status { margin-left: auto; font-size: 11px; padding: 2px 8px;
+    border-radius: 4px; font-weight: 500; }
+  .status.ok { background: var(--success-bg); color: var(--success); }
+  .status.fail { background: var(--danger-bg); color: var(--danger); }
+  .status.warn { background: var(--warning-bg); color: var(--warning); }
+  .compare-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
+
+  pre.output-text { font-family: ui-monospace, SFMono-Regular, Menlo, "Apple SD Gothic Neo", monospace;
+    font-size: 11px; line-height: 1.7; background: var(--surface-alt);
+    border-radius: 6px; padding: 14px 16px; margin: 0; max-height: 480px;
+    overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+    border: 1px solid var(--border); }
+  .err { background: var(--danger-bg); color: var(--danger); font-weight: 500;
+    padding: 0 3px; border-radius: 3px; }
+  .ok-h { background: var(--success-bg); color: var(--success); font-weight: 500;
+    padding: 0 3px; border-radius: 3px; }
+
+  /* 회전 보정 시각화 */
+  .rotation-vis { display: flex; align-items: center; justify-content: center; gap: 24px;
+    padding: 28px 20px; background: var(--surface-alt); border-radius: 6px;
+    margin-top: 10px; border: 1px solid var(--border); }
+  .rotation-doc { background: var(--surface); border: 1px solid var(--border-strong);
+    border-radius: 4px; padding: 14px 16px; font-size: 11.5px; line-height: 1.7;
+    min-width: 140px; text-align: center; }
+  .rotation-doc.rotated { transform: rotate(180deg); color: var(--danger); border-color: var(--danger); }
+  .rotation-doc.normal { color: var(--success); border-color: var(--success); }
+  .rotation-arrow { font-size: 26px; color: var(--accent); }
+  .rotation-label { font-size: 10px; color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-top: 6px; }
+
+  /* 체크박스 시각화 */
+  .checkbox-row { display: flex; gap: 10px; flex-wrap: wrap; padding: 14px;
+    background: var(--surface-alt); border-radius: 6px; margin-top: 10px;
+    border: 1px solid var(--border); }
+  .check-item { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .check-item .mark { font-size: 14px; }
+  .check-item.checked { border-color: var(--success); }
+  .check-item.checked .mark { color: var(--success); font-weight: 600; }
+  .check-item .label-faint { color: var(--text-muted); }
+
+  /* 약품명 비교 */
+  table.drugs { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+  table.drugs th, table.drugs td { padding: 10px 12px; border: 1px solid var(--border);
+    text-align: left; vertical-align: middle; }
+  table.drugs th { background: var(--surface-alt); font-weight: 500; color: var(--text-muted); font-size: 11px; }
+  table.drugs .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--text-muted); font-size: 11px; }
+  table.drugs .correct { background: var(--success-bg); color: var(--success); font-weight: 500; }
+  table.drugs .wrong { background: var(--danger-bg); color: var(--danger); font-weight: 500; }
+
+  /* rowspan 셀 시각화 */
+  table.rowspan-demo { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 10px; }
+  table.rowspan-demo th, table.rowspan-demo td { padding: 6px 8px; border: 1px solid var(--border);
+    text-align: left; vertical-align: middle; }
+  table.rowspan-demo th { background: var(--surface-alt); font-weight: 500; color: var(--text-muted); }
+  table.rowspan-demo .merged { background: var(--success-bg); color: var(--success); font-weight: 500; }
+
+  /* paragraph fragments */
+  .fragment-vis { background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px; margin-top: 10px; font-size: 11.5px; line-height: 1.9; }
+  .text-fragment { background: var(--danger-bg); color: var(--danger);
+    padding: 2px 6px; border-radius: 3px; display: inline-block; margin: 2px 4px 2px 0;
+    font-size: 11px; }
+  .text-duplicate { background: var(--warning-bg); color: var(--warning); padding: 2px 6px;
+    border-radius: 3px; display: inline-block; margin: 2px 4px 2px 0; font-size: 11px; font-weight: 500; }
+
+  .legend { margin-top: 14px; padding: 14px 18px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+    color: var(--text-muted); line-height: 1.7; }
+  .legend .chip { display: inline-block; width: 11px; height: 11px;
+    border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  .chip.danger { background: var(--danger-bg); border: 1px solid var(--danger); }
+  .chip.success { background: var(--success-bg); border: 1px solid var(--success); }
+  .chip.warn { background: var(--warning-bg); border: 1px solid var(--warning); }
+
+  .takeaways { margin-top: 32px; }
+  .takeaway-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 22px; margin-bottom: 12px; }
+  .takeaway-card h3 { font-size: 14px; font-weight: 500; margin: 0 0 6px;
+    color: var(--accent); }
+  .takeaway-card p { margin: 0; font-size: 13px; color: var(--text); line-height: 1.7; }
+
+  .note { background: var(--warning-bg); border: 1px solid var(--warning);
+    border-radius: 6px; padding: 12px 16px; margin-top: 16px;
+    font-size: 12px; color: var(--warning); line-height: 1.6; }
+  .note strong { color: var(--warning); font-weight: 600; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-faint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @media (max-width: 880px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .container { padding: 32px 20px; }
+    table.metrics th.metric-col { width: 140px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <span class="eyebrow">DP 실측 비교 — Appendix B</span>
+  <h1>회전된 한국 처방전 인식 실측 비교</h1>
+  <p class="subtitle">Upstage Document Parse <code>document-parse-260128</code> (Standard) vs Corepin Document Parse <code>doc-2026.05</code></p>
+  <div class="meta-line">
+    <span><strong>대상</strong> 한국 의료보험 처방전 (강민지 환자, 기쁨병원, 2019.10.15)</span>
+    <span><strong>입력</strong> PNG · 180° 회전된 스캔 이미지</span>
+    <span><strong>특성</strong> 회전 보정 필요 + 다중 병합 셀 표 + 체크박스 양식 + 의약품 코드/명칭/용량 매트릭스</span>
+  </div>
+</header>
+
+<h2>출력 지표 비교</h2>
+
+<table class="metrics">
+  <thead>
+    <tr>
+      <th class="metric-col">지표</th>
+      <th>
+        <div class="badge upstage">UPSTAGE</div>
+        <div class="col-header">Document Parse (Standard)</div>
+        <div class="endpoint">document-parse-260128 · standard: [1]</div>
+      </th>
+      <th>
+        <div class="badge corepin">COREPIN</div>
+        <div class="col-header">Document Parse</div>
+        <div class="endpoint">doc-2026.05 · /v1/doc/parse</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="label">상태</td><td>완료</td><td>완료</td></tr>
+    <tr><td class="label">모델 버전</td><td>document-parse-260128</td><td>doc-2026.05</td></tr>
+    <tr><td class="label">처리 모드</td><td>Standard (Enhanced 미사용)</td><td>단일 모드</td></tr>
+    <tr><td class="label">자동 회전 보정 (180°)</td><td class="pos">작동 — 텍스트 정방향 추출</td><td class="neg">미작동 — 회전된 채로 OCR</td></tr>
+    <tr><td class="label">출력 요소 구조</td><td class="pos">header + 표 2개 (3 elements)</td><td class="neg">paragraph 1개</td></tr>
+    <tr><td class="label">표 구조 인식</td><td class="pos">HTML table (rowspan/colspan 다중)</td><td class="neg">table 0개, 모두 paragraph</td></tr>
+    <tr><td class="label">의약품명 정확도 (3종)</td><td class="pos">3/3 정확 (스티렌정 포함)</td><td class="neg">3/3 모두 오인식</td></tr>
+    <tr><td class="label">체크박스 상태 (☑/□)</td><td class="pos">체크 상태 구분 인식</td><td class="neg">미인식</td></tr>
+    <tr><td class="label">텍스트 중복 출력</td><td class="pos">없음</td><td class="neg">전체 내용 2회 반복</td></tr>
+    <tr><td class="label">bbox 좌표</td><td class="pos">4-vertex polygon, 모든 element</td><td class="faint">미제공</td></tr>
+    <tr><td class="label">빈 셀 처리 (양식 보존)</td><td class="pos">원본 양식 구조 유지</td><td class="neg">텍스트 단일 덩어리</td></tr>
+    <tr><td class="label">환자 정보 인식</td><td class="pos">강민지 / 920820-2****** 정확</td><td>인식되지만 표 위치 미상</td></tr>
+    <tr><td class="label">무의미한 단어 생성</td><td class="pos">거의 없음 (도장 영역 일부만)</td><td class="neg">"먹거리먹기로운" 등 다수</td></tr>
+  </tbody>
+</table>
+
+<h2>구조 인식 비교 — 핵심 3대 영역</h2>
+
+<h3 class="sub">① 자동 회전 보정 (DP-IN-004 실측 검증)</h3>
+
+<p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 6px;">
+원본 입력 이미지는 180° 회전된 상태. 정상 처리하려면 회전 보정 후 OCR이 필요.
+</p>
+
+<div class="compare-grid">
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge upstage">UPSTAGE</div>
+      <div class="col-header">자동 회전 보정 작동</div>
+      <div class="status ok">정방향 추출</div>
+    </div>
+    <p class="compare-sub">Standard 모드만으로도 회전 감지 + 보정. 텍스트가 정방향 의미 단위로 추출됨.</p>
+    <div class="rotation-vis">
+      <div>
+        <div class="rotation-doc rotated">처 방 전<br>강민지<br>2019.10.15</div>
+        <div class="rotation-label">입력 (180°)</div>
+      </div>
+      <div class="rotation-arrow">→</div>
+      <div>
+        <div class="rotation-doc normal">처 방 전<br>강민지<br>2019.10.15</div>
+        <div class="rotation-label">출력 (정방향)</div>
+      </div>
+    </div>
+    <p style="font-size: 11.5px; color: var(--text-muted); margin: 12px 0 0; line-height: 1.6;">
+      Upstage 명세서 <strong style="color: var(--success);">DP-IN-004 (스캔 문서 자동 보정)</strong> 명시 기능이 실측에서 정확히 작동함을 확인.
+    </p>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge corepin">COREPIN</div>
+      <div class="col-header">회전 보정 미작동</div>
+      <div class="status fail">회전된 채로 OCR</div>
+    </div>
+    <p class="compare-sub">명세서에 회전 보정 기능 미명시. 회전된 이미지 그대로 OCR 시도.</p>
+    <div class="rotation-vis">
+      <div>
+        <div class="rotation-doc rotated">처 방 전<br>강민지<br>2019.10.15</div>
+        <div class="rotation-label">입력 (180°)</div>
+      </div>
+      <div class="rotation-arrow" style="color: var(--danger);">→</div>
+      <div>
+        <div class="rotation-doc rotated" style="border-style: dashed;">텍스트 추출<br>(회전 상태로)</div>
+        <div class="rotation-label">출력 (보정 X)</div>
+      </div>
+    </div>
+    <p style="font-size: 11.5px; color: var(--text-muted); margin: 12px 0 0; line-height: 1.6;">
+      회전 상태 그대로 OCR 시도 → <strong style="color: var(--danger);">약품명 다수 오인식, 무의미한 단어 생성, 텍스트 중복 출력</strong>.
+    </p>
+  </div>
+
+</div>
+
+<h3 class="sub">② 표 구조 + 체크박스 양식 인식</h3>
+
+<p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 6px;">
+처방전 메인 표는 다중 병합 셀(rowspan="4" 의료기관, rowspan="2" 환자/질병분류 등) + 체크박스 양식(☑ 의료보험, □ 의료보호 등) 구조.
+</p>
+
+<div class="compare-grid">
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge upstage">UPSTAGE</div>
+      <div class="col-header">HTML table 완벽 복원 + 체크박스 구분</div>
+      <div class="status ok">완벽</div>
+    </div>
+    <p class="compare-sub">rowspan/colspan 다중 사용 + 체크된 ☑와 빈 □ 구분 인식.</p>
+    <table class="rowspan-demo">
+      <thead><tr><th>구분</th><th colspan="2">내용</th><th>병합</th></tr></thead>
+      <tbody>
+        <tr><td class="merged" rowspan="4">의료기관</td><td>명 칭</td><td>기쁨병원</td><td>rowspan=4</td></tr>
+        <tr><td>전화번호</td><td>02)570-1234</td><td>colspan=2</td></tr>
+        <tr><td>팩스번호</td><td>02)570-1233</td><td>colspan=2</td></tr>
+        <tr><td>E-mail</td><td>—</td><td>colspan=2</td></tr>
+      </tbody>
+    </table>
+    <h3 class="sub" style="margin: 14px 0 6px;">체크박스 상태 인식</h3>
+    <div class="checkbox-row">
+      <div class="check-item checked"><span class="mark">☑</span>의료보험</div>
+      <div class="check-item"><span class="mark">□</span><span class="label-faint">의료보호</span></div>
+      <div class="check-item"><span class="mark">□</span><span class="label-faint">산재보험</span></div>
+      <div class="check-item"><span class="mark">□</span><span class="label-faint">자동차보험</span></div>
+      <div class="check-item"><span class="mark">□</span><span class="label-faint">기타</span></div>
+    </div>
+    <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0;">
+      HTML: <code>☑ 의료보험 □ 의료보호 □산재보험 ...</code> — 체크 상태 구분 인식
+    </p>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge corepin">COREPIN</div>
+      <div class="col-header">표 0개, 모든 내용을 paragraph로</div>
+      <div class="status fail">구조 손실</div>
+    </div>
+    <p class="compare-sub"><code>blocks</code> 배열에 <code>type: "table"</code> 0개. 체크박스 정보 일체 누락.</p>
+    <div class="fragment-vis">
+<span class="text-fragment">조제 내역 처방의약품의 명칭 645400120 도란사민 합썰 250MG (제일)</span><br>
+<span class="text-fragment">교부일자 교부변호 제 00180 호 전화번호 02)570-1234</span><br>
+<span class="text-fragment">상업 강민지 펙스벤츠 02)570-1233</span><br>
+<span class="text-fragment">절명분류 기술 E 0 4 1 성명 정맥의 양성 및 위생에 관한 의견은 복구하여야 한다.</span><br>
+<span class="text-fragment">한자와 요구가 있는 때에는 절명분류기호를 기재하지 아니합니다.</span><br>
+<span class="text-fragment">조제시 창고사항 : 조제기관명 ...</span>
+    </div>
+    <p style="font-size: 11.5px; color: var(--text-muted); margin: 12px 0 0; line-height: 1.6;">
+      모든 내용이 <strong>단일 paragraph로 평탄화</strong>. 표 구조 + 체크박스 양식 정보 완전 손실. 환자명/병원명/전화번호가 어느 셀에 속하는지 알 수 없음.
+    </p>
+  </div>
+
+</div>
+
+<h3 class="sub">③ 의약품명 정확도 — 의료 도메인 신뢰도</h3>
+
+<p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 6px;">
+회전 보정 작동 여부의 차이가 OCR 정확도, 특히 의약품명 인식에 직접적인 영향. 의료 도메인에서 약품명 오인식은 환자 안전에 직결되는 문제.
+</p>
+
+<table class="drugs">
+  <thead>
+    <tr>
+      <th style="width: 120px;">약품 코드</th>
+      <th style="width: 220px;">원본 (정방향 기준)</th>
+      <th>Upstage DP Standard</th>
+      <th>Corepin DP</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="code">645400120</td>
+      <td>도란사민 캅셀 250MG (제일)</td>
+      <td class="correct">도란사민 캅셀 250MG (제일) ✓</td>
+      <td class="wrong">도란사민 <strong>합썰</strong> 250MG ("캅셀"→"합썰")</td>
+    </tr>
+    <tr>
+      <td class="code">653400910</td>
+      <td>케토라신정 10mg (동국)</td>
+      <td class="correct">케토라신정 10mg (동국) ✓</td>
+      <td class="wrong">케토라신<strong>장</strong> 10mg ("정"→"장")</td>
+    </tr>
+    <tr>
+      <td class="code">642502290</td>
+      <td>스티렌정 (동아)</td>
+      <td class="correct">스티렌정 (동아) ✓</td>
+      <td class="wrong"><strong>스타헌증</strong> (존재하지 않는 약품)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>의료 도메인 임팩트:</strong> 스티렌정(Stillen)은 실제 <strong>동아ST의 위염 치료제</strong>. Corepin의 "스타헌증"은 한국 의약품 데이터베이스에 존재하지 않는 명칭. 처방전 자동 처리 시스템에서 약품명 오인식은 환자에게 잘못된 약이 조제되거나 청구 거절로 이어질 수 있는 결정적 결함.
+</div>
+
+<h2>elements 배열 응답 구조 비교</h2>
+
+<div class="compare-grid">
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge upstage">UPSTAGE</div>
+      <div class="col-header">3 elements: header + 표 2개</div>
+      <div class="status ok">구조화 완료</div>
+    </div>
+    <p class="compare-sub">document-parse-260128 · standard: [1] · 처방전 양식 구조 정확 복원</p>
+<pre class="output-text">{
+  "api": "2.0",
+  "model": "document-parse-260128",
+  "elements": [
+    {
+      "category": <span class="ok-h">"header"</span>,
+      "content": {
+        "html": "&lt;header&gt;환자보관용&lt;br&gt;
+                 ...강민지&lt;/header&gt;"
+      },
+      "coordinates": <span class="ok-h">[4-vertex polygon]</span>,
+      "id": 0, "page": 1
+    },
+    {
+      "category": <span class="ok-h">"table"</span>,
+      "content": {
+        "html": "&lt;table&gt;
+          &lt;tr&gt;&lt;td colspan='8'&gt;처 방 전 ...
+            <span class="ok-h">☑ 의료보험 □ 의료보호 □산재보험</span>
+            ...&lt;/td&gt;&lt;/tr&gt;
+          &lt;tr&gt;&lt;td colspan='2'&gt;교부일자&lt;/td&gt;
+              &lt;td&gt;2019년 10월 15일&lt;/td&gt;
+              &lt;td <span class="ok-h">rowspan='4'</span>&gt;의료기관&lt;/td&gt;
+              ...
+          &lt;tr&gt;&lt;td colspan='3'&gt;<span class="ok-h">645400120
+                 도란사민 캅셀 250MG (제일)</span>&lt;/td&gt;
+              &lt;td&gt;2.00&lt;/td&gt;&lt;td&gt;3 3&lt;/td&gt;
+              &lt;td colspan='3'&gt;하루3번 식후30분에&lt;/td&gt;
+          ...
+        &lt;/table&gt;"
+      },
+      "coordinates": [...]
+    },
+    {
+      "category": <span class="ok-h">"table"</span>,
+      "content": { "html": "&lt;table&gt;조제시 참고사항..." }
+    }
+  ],
+  "usage": { "pages": 1, "standard": [1] }
+}</pre>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge corepin">COREPIN</div>
+      <div class="col-header">1 paragraph (전체 텍스트 + 중복)</div>
+      <div class="status fail">구조 손실</div>
+    </div>
+    <p class="compare-sub">doc-2026.05 · table 0개 · 같은 내용 2회 반복 출력</p>
+<pre class="output-text">{
+  "text": "조제 내역 처방의약품의 명칭 
+    645400120 <span class="err">도란사민 합썰 250MG</span> (제일) 
+    633400910 <span class="err">케토라신장</span>10mg (동국) 
+    642502290 <span class="err">스타헌증</span> (동아) ...
+    <span style="background: var(--warning-bg); color: var(--warning); padding: 2px 4px; border-radius: 3px; font-weight: 500;">→ 같은 내용 2회 반복 ↓</span>
+    조제시 창고사항 : 조제기관명 처방의약품의 명칭 
+    645400120 <span class="err">도란사민 합썰 250MG</span> (제일) ...",
+  
+  "markdown": "(전체 텍스트 동일하게 2회 반복)",
+  
+  "blocks": [
+    {
+      "type": <span class="err">"paragraph"</span>,  <span style="color: var(--text-faint);">// table 아님</span>
+      "text": "(전체 텍스트 한 덩어리)",
+      "pageNumber": 1
+    }
+  ]
+  <span class="err">// table 카테고리 0개
+  // bbox 좌표 없음
+  // 체크박스 정보 없음
+  // 표 양식 구조 완전 손실</span>
+}</pre>
+  </div>
+
+</div>
+
+<div class="legend">
+  <span class="chip danger"></span><strong style="color: var(--text); font-weight: 500;">빨간 음영</strong> = Corepin의 약품명 오인식, 텍스트 fragments, 구조 손실 영역.<br>
+  <span class="chip warn"></span><strong style="color: var(--text); font-weight: 500;">노란 음영</strong> = Corepin의 텍스트 중복 출력 (전체 내용이 2회 반복되는 이상 동작).<br>
+  <span class="chip success"></span><strong style="color: var(--text); font-weight: 500;">초록 음영</strong> = Upstage의 정확 인식 영역 (회전 보정 후 표 구조 + 약품명 + 체크박스).
+</div>
+
+<h2>핵심 시사점</h2>
+
+<div class="takeaways">
+  <div class="takeaway-card">
+    <h3>1. 자동 회전 보정 — Standard 모드에서도 작동</h3>
+    <p>Upstage DP는 <strong>Enhanced 모드 없이 Standard 모드만으로도</strong> 180° 회전된 처방전을 정확히 보정하여 정방향 텍스트로 추출. DP-IN-004 (스캔 문서 자동 보정) 명시 기능이 실측에서 검증됨. Corepin은 회전 보정 기능 명세서에 미언급 — 회전된 채로 OCR 시도하여 정확도 폭락. 한국 사무 환경에서 흔한 <strong>복합기 스캔·모바일 촬영·팩스 수신 문서</strong>에서 격차가 결정적으로 벌어짐.</p>
+  </div>
+
+  <div class="takeaway-card">
+    <h3>2. 의료 도메인 신뢰도 — 약품명 정확도의 비즈니스 임팩트</h3>
+    <p>회전 보정 작동 여부가 OCR 정확도로 직결. Upstage는 약품명 3종 모두 정확 인식 (스티렌정, 케토라신정, 도란사민 캅셀). Corepin은 3/3 모두 오인식하며 <strong>"스티렌정"을 "스타헌증"</strong>이라는 존재하지 않는 약품명으로 출력. 처방전 자동화·청구 시스템·전자처방 연동에서 약품명 오인식은 환자 안전과 청구 정합성에 직결되는 결정적 결함. 단순히 "정확도가 조금 낮다"가 아니라 <strong>의료 도메인에서 사용 가능 여부 자체가 갈리는 격차</strong>.</p>
+  </div>
+
+  <div class="takeaway-card">
+    <h3>3. 표 구조 + 체크박스 — 양식 문서의 본질</h3>
+    <p>처방전은 단순 텍스트 문서가 아닌 <strong>구조화된 양식 문서</strong>: 환자/의료기관/의약품/조제내역이 표의 셀에 배치되고, 보험 종류는 체크박스로 표시. Upstage는 HTML table (rowspan/colspan 다중) + 체크박스 상태(☑/□) 모두 정확히 보존. Corepin은 전체 내용을 단일 paragraph로 평탄화하며 양식 구조 완전 손실. 보험 약관·신청서·계약서·신고서 등 한국 사무 문서의 절대 다수가 양식 기반이라는 점에서, 이 격차는 단일 문서가 아닌 <strong>거의 모든 한국 사무 자동화 시나리오에 적용</strong>됨.</p>
+  </div>
+</div>
+
+<footer>
+  <span>Upstage DP 팀 · TPM 작성 · 2026.05</span>
+  <span>비교 모델: document-parse-260128 (Standard) vs doc-2026.05 · 실측 1건 (Songki 확인 필요)</span>
+</footer>
+
+</div>
+</body>
+</html>
