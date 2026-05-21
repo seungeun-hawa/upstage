@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영문 보험 표 OCR 실측 비교 — Upstage Document OCR vs Corepin OCR</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-alt: #f5f5f3;
+    --border: #e5e5e0;
+    --border-strong: #d4d4cf;
+    --text: #1a1a1a;
+    --text-muted: #6b6b66;
+    --text-faint: #999994;
+    --accent: #534AB7;
+    --accent-bg: #EEEDFE;
+    --success: #0F6E56;
+    --success-bg: #E1F5EE;
+    --danger: #A32D2D;
+    --danger-bg: #FCEBEB;
+    --warning: #854F0B;
+    --warning-bg: #FAEEDA;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 48px 32px 64px; }
+
+  header { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; }
+  .eyebrow { display: inline-block; font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); background: var(--accent-bg);
+    padding: 4px 10px; border-radius: 4px; margin-bottom: 12px; }
+  h1 { font-size: 26px; font-weight: 500; margin: 0 0 8px; line-height: 1.3; }
+  .subtitle { color: var(--text-muted); font-size: 14px; margin: 0; }
+  .meta-line { display: flex; gap: 20px; font-size: 12px; color: var(--text-faint); margin-top: 16px; flex-wrap: wrap; }
+  .meta-line span strong { color: var(--text-muted); font-weight: 500; }
+
+  h2 { font-size: 16px; font-weight: 500; margin: 40px 0 16px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border); }
+
+  table.metrics { width: 100%; border-collapse: collapse; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 13px; }
+  table.metrics th { text-align: left; padding: 14px 16px; background: var(--surface-alt);
+    font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+  table.metrics th.metric-col { width: 200px; }
+  table.metrics td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.metrics tr:last-child td { border-bottom: none; }
+  table.metrics td.label { color: var(--text-muted); font-size: 12px; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 3px 8px;
+    border-radius: 4px; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .badge.upstage { background: #1a1a1a; color: #fff; }
+  .badge.corepin { background: #fff; color: #1a1a1a; border: 1px solid var(--border-strong); }
+  .col-header { font-weight: 500; font-size: 14px; }
+  .endpoint { font-size: 11px; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 2px; }
+
+  .pos { color: var(--success); font-weight: 500; }
+  .neg { color: var(--danger); }
+  .faint { color: var(--text-faint); }
+
+  .output-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .output-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 20px; }
+  .output-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .output-head .status { margin-left: auto; font-size: 11px; padding: 2px 8px;
+    border-radius: 4px; background: var(--success-bg); color: var(--success); font-weight: 500; }
+  .output-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
+  .output-stats { display: flex; gap: 18px; font-size: 12px; color: var(--text-muted);
+    margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .output-stats .stat-label { color: var(--text-faint); margin-right: 4px; }
+  .output-stats .stat-value { font-weight: 500; color: var(--text); }
+  .output-stats .stat-value.miss { color: var(--text-faint); font-weight: 400; }
+
+  pre.output-text { font-family: ui-monospace, SFMono-Regular, Menlo, "Apple SD Gothic Neo", monospace;
+    font-size: 11.5px; line-height: 1.75; background: var(--surface-alt);
+    border-radius: 6px; padding: 14px 16px; margin: 0; max-height: 560px;
+    overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+    border: 1px solid var(--border); }
+  .err { background: var(--danger-bg); color: var(--danger); font-weight: 500;
+    padding: 0 3px; border-radius: 3px; }
+  .ok { background: var(--success-bg); color: var(--success); font-weight: 500;
+    padding: 0 3px; border-radius: 3px; }
+
+  .legend { margin-top: 18px; padding: 14px 18px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+    color: var(--text-muted); line-height: 1.7; }
+  .legend .chip { display: inline-block; width: 11px; height: 11px;
+    background: var(--danger-bg); border: 1px solid var(--danger); border-radius: 2px;
+    vertical-align: middle; margin-right: 6px; }
+
+  /* 표 재구성 시각화 */
+  .reconstruction { margin-top: 16px; }
+  .recon-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 20px; margin-bottom: 12px; }
+  .recon-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  table.dcode { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.dcode th { text-align: left; padding: 8px 10px; background: var(--surface-alt);
+    font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border);
+    font-size: 11px; }
+  table.dcode td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  table.dcode tr:last-child td { border-bottom: none; }
+  table.dcode .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-weight: 500; color: var(--text); }
+  table.dcode .not-covered { color: var(--danger); font-weight: 500; }
+  table.dcode .unknown { color: var(--text-faint); font-style: italic; }
+
+  .takeaways { margin-top: 32px; }
+  .takeaway-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 22px; margin-bottom: 12px; }
+  .takeaway-card h3 { font-size: 14px; font-weight: 500; margin: 0 0 6px;
+    color: var(--accent); }
+  .takeaway-card p { margin: 0; font-size: 13px; color: var(--text); line-height: 1.7; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-faint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @media (max-width: 880px) {
+    .output-grid { grid-template-columns: 1fr; }
+    .container { padding: 32px 20px; }
+    table.metrics th.metric-col { width: 130px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <span class="eyebrow">OCR 실측 비교 — Appendix D</span>
+  <h1>영문 보험 표 OCR 실측 비교</h1>
+  <p class="subtitle">Upstage Document OCR (<code>ocr-250904</code>) vs Corepin OCR (<code>ocr-2026.05</code>)</p>
+  <div class="meta-line">
+    <span><strong>대상</strong> DeltaCare USA Family Dental HMO — Plan Highlights</span>
+    <span><strong>입력</strong> PNG · 791×1024 px</span>
+    <span><strong>특성</strong> 영문 + 2단/4단 표 구조 + 13개 D-코드 행 + 코페이먼트 매트릭스</span>
+  </div>
+</header>
+
+<h2>출력 지표 비교</h2>
+
+<table class="metrics">
+  <thead>
+    <tr>
+      <th class="metric-col">지표</th>
+      <th>
+        <div class="badge upstage">UPSTAGE</div>
+        <div class="col-header">Document OCR</div>
+        <div class="endpoint">ocr-250904 · alias: ocr</div>
+      </th>
+      <th>
+        <div class="badge corepin">COREPIN</div>
+        <div class="col-header">OCR</div>
+        <div class="endpoint">/v1/ocr · 한국어 OCR</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="label">상태</td><td>완료</td><td>완료</td></tr>
+    <tr><td class="label">모델 버전</td><td>ocr-250904</td><td>ocr-2026.05</td></tr>
+    <tr><td class="label">전체 confidence</td><td><strong>0.9872</strong></td><td class="faint">미제공</td></tr>
+    <tr><td class="label">Word 분리</td><td><strong>328개</strong> (bbox + confidence)</td><td class="faint">미제공</td></tr>
+    <tr><td class="label">Line 분리</td><td><strong>43개</strong> (bbox + confidence)</td><td>1개 청크에 흘려넣기</td></tr>
+    <tr><td class="label">bbox 좌표</td><td>4-vertex polygon (word/line)</td><td class="faint">미제공</td></tr>
+    <tr><td class="label">페이지 메타</td><td>width 791 / height 1024</td><td class="faint">미제공</td></tr>
+    <tr><td class="label">D-코드 인식 (13개)</td><td class="pos">13/13 인식</td><td class="pos">13/13 인식</td></tr>
+    <tr><td class="label">D-코드 ↔ 코페이먼트 매칭</td><td class="pos">행 단위 자동 매칭 가능 (bbox y좌표)</td><td class="neg">공간 정보 없음 — 매칭 불가능</td></tr>
+    <tr><td class="label">"Not covered" 보존 (2건)</td><td class="pos">2/2 보존 (D1120, D1351)</td><td class="neg">존재는 인식, 어느 행인지 모름</td></tr>
+    <tr><td class="label">멀티헤더 구조</td><td class="pos">행 분리 (Pediatric/Adult 별도 line)</td><td class="neg">"Pediatric Benefits Adult Benefits" 1줄 병합</td></tr>
+    <tr><td class="label">헤더 행 중복</td><td class="pos">없음</td><td class="neg">"Category Procedure Code..." 2회 출현</td></tr>
+    <tr><td class="label">마지막 데이터 보존</td><td class="pos">완전 보존</td><td class="neg">"Not covered Not covered Not" — 잘림</td></tr>
+    <tr><td class="label">각주 ¹²³ 분리</td><td class="pos">3개 각주 모두 별도 line</td><td class="neg">본문 표와 분리 안 됨</td></tr>
+  </tbody>
+</table>
+
+<h2>원문 텍스트 출력 비교</h2>
+
+<div class="output-grid">
+
+  <div class="output-card">
+    <div class="output-head">
+      <div class="badge upstage">UPSTAGE</div>
+      <div class="col-header">Document OCR</div>
+      <div class="status">완료</div>
+    </div>
+    <p class="output-sub">ocr-250904 · 43 lines, word/line bbox + confidence 제공</p>
+    <div class="output-stats">
+      <div><span class="stat-label">words</span><span class="stat-value">328</span></div>
+      <div><span class="stat-label">lines</span><span class="stat-value">43</span></div>
+      <div><span class="stat-label">conf</span><span class="stat-value">0.9872</span></div>
+    </div>
+<pre class="output-text">Delta Dental Individual & Family TM 
+DeltaCareⓇ USA 
+Family Dental HMO 
+Plan Highlights 
+Deductibles and Maximums Pediatric Benefits Adult Benefits 
+(up to age 19) (age 19 and older) 
+Deductible 
+Enrollee None None 
+Family None None 
+Out-of-Pocket Maximum $350 one pediatric enrollee 
+After this amount is reached, the plan pays 100% of $700 two or more pediatric 
+None 
+the remaining covered services per Calendar Year. enrollees 
+Sample of Covered Services1 
+Category Procedure Code and Description2 Copayment Amount3 
+Pediatric Benefits Adult Benefits 
+D0999 - Office visit <span class="ok">No charge No charge</span>
+D0120 - Periodic oral exam - established patient <span class="ok">No charge No charge</span>
+D0150 - Comprehensive oral evaluation - new or 
+<span class="ok">No charge No charge</span>
+established patient 
+D0210 - Complete series of x-rays <span class="ok">No charge No charge</span>
+D0220 - Periapical x-ray of tooth's root <span class="ok">No charge No charge</span>
+D0230 - Periapical x-ray of tooth's root, each 
+<span class="ok">No charge No charge</span>
+Diagnostic additional image 
+and Preventive 
+D0272 - Bitewing x-rays (2 images) <span class="ok">No charge No charge</span>
+Services 
+D0274 - Bitewing x-rays (4 images) <span class="ok">No charge No charge</span>
+D0330 - Panoramic x-ray <span class="ok">No charge No charge</span>
+D1110 - Prophylaxis (cleaning) - adult <span class="ok">No charge No charge</span>
+D1120 - Prophylaxis (cleaning) - child <span class="ok">No charge Not covered</span>
+D1208 - Fluoride treatment <span class="ok">No charge No charge</span>
+D1351 - Sealant - per tooth <span class="ok">No charge Not covered</span>
+1 Featured benefits represent the most frequently used services covered under your plan; other services are also covered. After 
+enrollment, DeltaCare USA will make available a complete list of covered services and copayments, along with any limitations and 
+exclusions that apply. If applicable, service areas are detailed in the limitations and exclusions. 
+2 Copayments and procedure descriptions referenced above are intended to clarify the delivery of benefits under the DeltaCare 
+USA plan. They are not to be interpreted as CDT-2020 descriptors or nomenclature, which are under copyright by the American 
+Dental Association. 
+3 A copayment is the amount the enrollee pays for covered services at the time of treatment. 
+HL_DCU_CA_I_FAM_PRF_21</pre>
+  </div>
+
+  <div class="output-card">
+    <div class="output-head">
+      <div class="badge corepin">COREPIN</div>
+      <div class="col-header">OCR</div>
+      <div class="status">완료</div>
+    </div>
+    <p class="output-sub">ocr-2026.05 · /v1/ocr · 텍스트만 반환</p>
+    <div class="output-stats">
+      <div><span class="stat-label">lines</span><span class="stat-value">1</span></div>
+      <div><span class="stat-label">words</span><span class="stat-value miss">미제공</span></div>
+      <div><span class="stat-label">conf</span><span class="stat-value miss">미제공</span></div>
+    </div>
+<pre class="output-text">Delta Dental Individual & Family™ DeltaCare® USA Family Dental HMO Plan Highlights Deductibles and Maximums Pediatric Benefits (up to age 19) Adult Benefits (age 19 and older) Deductible Enrollee Family None None Out-of-Pocket Maximum After this amount is reached, the plan pays 100% of the remaining covered services per Calendar Year. $350 one pediatric enrollee $700 two or more pediatric enrollees None Sample of Covered Services¹ Category Procedure Code and Description² Copayment Amount³ Pediatric Benefits Adult Benefits <span class="err">Category Procedure Code and Description²</span> <span class="err">No charge No charge</span> Diagnostic and Preventive Services D0999 – Office visit D0120 – Periodic oral exam — established patient D0150 – Comprehensive oral evaluation — new or established patient D0210 – Complete series of x-rays D0220 – Periapical x-ray of tooth's root D0230 – Periapical x-ray of tooth's root, each additional image D0272 – Bitewing x-rays (2 images) D0274 – Bitewing x-rays (4 images) D0330 – Panoramic x-ray D1110 – Prophylaxis (cleaning) – adult D1120 – Prophylaxis (cleaning) – child D1208 – Fluoride treatment D1351 – Sealant – per tooth <span class="err">No charge No charge No charge No charge No charge No charge No charge No charge No charge Not covered Not covered Not</span></pre>
+  </div>
+
+</div>
+
+<div class="legend">
+  <span class="chip"></span><strong style="color: var(--text); font-weight: 500;">빨간 음영</strong> = Corepin 출력의 구조 결함 구간. (1) 헤더 행 중복 "Category Procedure Code and Description²" 2회 등장, (2) D-코드 13개와 코페이먼트 13쌍이 분리되어 매칭 불가능, (3) 마지막 셀 "Not covered"가 잘려 "Not"으로 끊김.<br>
+  <span style="display: inline-block; width: 11px; height: 11px; background: var(--success-bg); border: 1px solid var(--success); border-radius: 2px; vertical-align: middle; margin-right: 6px;"></span><strong style="color: var(--text); font-weight: 500;">초록 음영</strong> = Upstage 출력에서 D-코드와 같은 line에 정확히 매칭된 코페이먼트.
+</div>
+
+<h2>핵심 시사점</h2>
+
+<div class="takeaways">
+  <div class="takeaway-card">
+    <h3>1. 표 구조 인식의 본질적 격차</h3>
+    <p>이 문서는 단순한 표가 아니라 <strong>13개 시술 코드 × 2개 보험 컬럼(Pediatric/Adult)의 매트릭스</strong>. 보험 청구, EOB(Explanation of Benefits) 자동화 시나리오에서 D-코드와 코페이먼트의 정확한 매칭은 필수. Upstage는 word/line bbox로 행 단위 자동 재구성이 가능한 반면, Corepin은 출력에 "No charge"가 22번 등장해도 어느 D-코드에 속하는지 모르는 상태.</p>
+  </div>
+
+  <div class="takeaway-card">
+    <h3>2. "Not covered"가 어디에 속하는지 모르는 문제</h3>
+    <p>표에서 D1120(소아 prophylaxis)과 D1351(sealant)은 Adult Benefits에서 <strong>Not covered</strong>로 명시. 이는 보험 청구가 거절될 수 있는 결정적 정보. Upstage 출력에서는 D1120 line에 "No charge Not covered", D1351 line에 "No charge Not covered"로 같은 line에 묶여 명확. Corepin 출력에서는 "Not covered Not covered Not"이 마지막에 잘려서 등장하지만, D1120/D1351에 속하는 정보임을 추론하기 어려움.</p>
+  </div>
+
+  <div class="takeaway-card">
+    <h3>3. 일본어 케이스와 합쳐서 보이는 패턴</h3>
+    <p>Corepin OCR의 구조적 약점은 두 영역에서 일관됨: 일본어 케이스(Appendix C)에서는 <strong>다국어 추론 실패</strong>(일본어→중국어), 영문 보험 표(Appendix D)에서는 <strong>2D 공간 구조 손실</strong>(표→1D 텍스트 스트림). 두 약점은 모두 같은 원인 — Corepin이 단일 청크 텍스트 추출 응답에 최적화되어 있고, raw OCR이 제공해야 할 word/line bbox + confidence 메타데이터를 출력하지 않기 때문. RAG·자동화·검증 파이프라인 구축에서 결정적 격차.</p>
+  </div>
+</div>
+
+<footer>
+  <span>Upstage DP 팀 · TPM 작성 · 2026.05</span>
+  <span>비교 모델: ocr-250904 vs ocr-2026.05 · 실측 1건 (Songki 확인 필요)</span>
+</footer>
+
+</div>
+</body>
+</html>
