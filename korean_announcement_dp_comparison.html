@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한국 공문 복합 레이아웃 DP 실측 비교 — Upstage DP Enhanced vs Corepin DP</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --surface: #ffffff;
+    --surface-alt: #f5f5f3;
+    --border: #e5e5e0;
+    --border-strong: #d4d4cf;
+    --text: #1a1a1a;
+    --text-muted: #6b6b66;
+    --text-faint: #999994;
+    --accent: #534AB7;
+    --accent-bg: #EEEDFE;
+    --success: #0F6E56;
+    --success-bg: #E1F5EE;
+    --danger: #A32D2D;
+    --danger-bg: #FCEBEB;
+    --warning: #854F0B;
+    --warning-bg: #FAEEDA;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 48px 32px 64px; }
+
+  header { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; }
+  .eyebrow { display: inline-block; font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); background: var(--accent-bg);
+    padding: 4px 10px; border-radius: 4px; margin-bottom: 12px; }
+  h1 { font-size: 26px; font-weight: 500; margin: 0 0 8px; line-height: 1.3; }
+  .subtitle { color: var(--text-muted); font-size: 14px; margin: 0; }
+  .meta-line { display: flex; gap: 20px; font-size: 12px; color: var(--text-faint); margin-top: 16px; flex-wrap: wrap; }
+  .meta-line span strong { color: var(--text-muted); font-weight: 500; }
+
+  h2 { font-size: 16px; font-weight: 500; margin: 40px 0 16px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border); }
+  h3.sub { font-size: 13px; font-weight: 500; margin: 24px 0 10px; color: var(--text-muted); }
+
+  table.metrics { width: 100%; border-collapse: collapse; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 13px; }
+  table.metrics th { text-align: left; padding: 14px 16px; background: var(--surface-alt);
+    font-weight: 500; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+  table.metrics th.metric-col { width: 220px; }
+  table.metrics td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.metrics tr:last-child td { border-bottom: none; }
+  table.metrics td.label { color: var(--text-muted); font-size: 12px; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 3px 8px;
+    border-radius: 4px; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .badge.upstage { background: #1a1a1a; color: #fff; }
+  .badge.corepin { background: #fff; color: #1a1a1a; border: 1px solid var(--border-strong); }
+  .col-header { font-weight: 500; font-size: 14px; }
+  .endpoint { font-size: 11px; color: var(--text-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 2px; }
+
+  .pos { color: var(--success); font-weight: 500; }
+  .neg { color: var(--danger); }
+  .faint { color: var(--text-faint); }
+
+  /* 비교 카드 (좌/우 병렬) */
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+  .compare-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 20px; }
+  .compare-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .compare-head .status { margin-left: auto; font-size: 11px; padding: 2px 8px;
+    border-radius: 4px; font-weight: 500; }
+  .status.ok { background: var(--success-bg); color: var(--success); }
+  .status.fail { background: var(--danger-bg); color: var(--danger); }
+  .compare-sub { font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
+
+  pre.output-text { font-family: ui-monospace, SFMono-Regular, Menlo, "Apple SD Gothic Neo", monospace;
+    font-size: 11px; line-height: 1.7; background: var(--surface-alt);
+    border-radius: 6px; padding: 14px 16px; margin: 0; max-height: 480px;
+    overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+    border: 1px solid var(--border); }
+  .err { background: var(--danger-bg); color: var(--danger); font-weight: 500;
+    padding: 0 3px; border-radius: 3px; }
+  .ok-h { background: var(--success-bg); color: var(--success); font-weight: 500;
+    padding: 0 3px; border-radius: 3px; }
+
+  /* 플로우차트 비교 시각화 */
+  .flow-vis { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px;
+    background: var(--surface-alt); border-radius: 6px; margin-top: 10px;
+    border: 1px solid var(--border); align-items: center; }
+  .flow-box { background: var(--surface); border: 1px solid var(--border-strong);
+    border-radius: 4px; padding: 6px 10px; font-size: 11px; color: var(--text); white-space: nowrap; }
+  .flow-arrow { color: var(--text-faint); font-size: 12px; }
+  .flow-box.bad { border-style: dashed; border-color: var(--danger); color: var(--danger); }
+
+  /* 플로우차트 figure 시각화 */
+  .figure-box { background: var(--surface); border: 2px solid var(--success);
+    border-radius: 6px; padding: 14px; margin-top: 10px; }
+  .figure-box .figure-label { font-size: 11px; color: var(--success); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .figure-box .figure-content { font-size: 12px; color: var(--text); line-height: 1.7; }
+  .figure-box .figure-type { color: var(--accent); font-weight: 500; margin-bottom: 6px; }
+
+  /* nested table 비교 시각화 */
+  .nested-vis { background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px; margin-top: 10px; font-size: 11.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; line-height: 1.7; }
+  .nested-vis .outer { color: var(--success); }
+  .nested-vis .inner { color: var(--accent); padding-left: 16px; display: block; }
+  .nested-vis .text-fragment { background: var(--danger-bg); color: var(--danger);
+    padding: 2px 6px; border-radius: 3px; display: inline-block; margin: 2px 4px 2px 0;
+    font-size: 11px; }
+
+  /* rowspan 셀 시각화 */
+  table.rowspan-demo { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 10px; }
+  table.rowspan-demo th, table.rowspan-demo td { padding: 6px 8px; border: 1px solid var(--border);
+    text-align: left; vertical-align: middle; }
+  table.rowspan-demo th { background: var(--surface-alt); font-weight: 500; color: var(--text-muted); }
+  table.rowspan-demo .merged { background: var(--success-bg); color: var(--success); font-weight: 500; }
+  table.rowspan-demo .missing { background: var(--danger-bg); color: var(--danger);
+    font-style: italic; font-weight: 500; }
+
+  .legend { margin-top: 14px; padding: 14px 18px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+    color: var(--text-muted); line-height: 1.7; }
+  .legend .chip { display: inline-block; width: 11px; height: 11px;
+    border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  .chip.danger { background: var(--danger-bg); border: 1px solid var(--danger); }
+  .chip.success { background: var(--success-bg); border: 1px solid var(--success); }
+
+  .takeaways { margin-top: 32px; }
+  .takeaway-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 22px; margin-bottom: 12px; }
+  .takeaway-card h3 { font-size: 14px; font-weight: 500; margin: 0 0 6px;
+    color: var(--accent); }
+  .takeaway-card p { margin: 0; font-size: 13px; color: var(--text); line-height: 1.7; }
+
+  footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-faint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @media (max-width: 880px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .container { padding: 32px 20px; }
+    table.metrics th.metric-col { width: 140px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <span class="eyebrow">DP 실측 비교 — Appendix A</span>
+  <h1>한국 공문 복합 레이아웃 인식 실측 비교</h1>
+  <p class="subtitle">Upstage Document Parse <code>document-parse-260128</code> (Enhanced) vs Corepin Document Parse <code>doc-2026.05</code></p>
+  <div class="meta-line">
+    <span><strong>대상</strong> 중소벤처기업부 공고 제2026-334호 (시행계획 공고)</span>
+    <span><strong>입력</strong> PDF · 3페이지</span>
+    <span><strong>특성</strong> 7컬럼 rowspan 표 + 좌/우 병렬 표 + 8박스 플로우차트 + 체크박스 + 다단 레이아웃</span>
+  </div>
+</header>
+
+<h2>출력 지표 비교</h2>
+
+<table class="metrics">
+  <thead>
+    <tr>
+      <th class="metric-col">지표</th>
+      <th>
+        <div class="badge upstage">UPSTAGE</div>
+        <div class="col-header">Document Parse (Enhanced)</div>
+        <div class="endpoint">document-parse-260128 · enhanced: [1,2,3]</div>
+      </th>
+      <th>
+        <div class="badge corepin">COREPIN</div>
+        <div class="col-header">Document Parse</div>
+        <div class="endpoint">doc-2026.05 · /v1/doc/parse</div>
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="label">상태</td><td>완료</td><td>완료</td></tr>
+    <tr><td class="label">모델 버전</td><td>document-parse-260128</td><td>doc-2026.05</td></tr>
+    <tr><td class="label">처리 모드</td><td>Enhanced (페이지별 적용 추적)</td><td>단일 모드 (auto_escalated 자동)</td></tr>
+    <tr><td class="label">출력 요소 개수</td><td><strong>62개 element</strong> (3페이지)</td><td>blocks 배열 (paragraph/heading/table/list)</td></tr>
+    <tr><td class="label">bbox 좌표</td><td class="pos">4-vertex polygon, 모든 element</td><td class="faint">미제공</td></tr>
+    <tr><td class="label">요소 카테고리</td><td class="pos">heading1, paragraph, list, table, figure, footer (6종+)</td><td class="neg">paragraph, heading, table, list (4종)</td></tr>
+    <tr><td class="label">병합 셀 (rowspan/colspan)</td><td class="pos">HTML 표준 rowspan/colspan 완벽 처리</td><td class="neg">rowspan 영역 셀 누락</td></tr>
+    <tr><td class="label">좌/우 병렬 표 분리</td><td class="pos">부모 표 안 nested table로 매핑</td><td class="neg">좌측 표를 paragraph로 분해</td></tr>
+    <tr><td class="label">플로우차트/다이어그램</td><td class="pos">figure 카테고리 + 자동 설명 텍스트</td><td class="neg">8개 별도 table + 화살표 텍스트화</td></tr>
+    <tr><td class="label">이미지 base64 반환</td><td class="pos">응답에 포함</td><td class="neg">미지원</td></tr>
+    <tr><td class="label">체크박스 (□/☑)</td><td class="pos">&lt;input type="checkbox"&gt; HTML 변환</td><td class="neg">미지원</td></tr>
+    <tr><td class="label">페이지 번호 (footer)</td><td class="pos">&lt;footer&gt; 태그로 분리</td><td>list로 처리</td></tr>
+    <tr><td class="label">Reading Order (좌/우 단)</td><td class="pos">x좌표 기반 좌/우 단 정확 구분</td><td class="neg">위→아래만 따라감</td></tr>
+    <tr><td class="label">출력 포맷</td><td>HTML(시맨틱 태그), Markdown, Text</td><td>text, markdown, blocks JSON</td></tr>
+  </tbody>
+</table>
+
+<h2>구조 인식 비교 — 핵심 3대 영역</h2>
+
+<h3 class="sub">① 좌/우 병렬 배치 표 (페이지 2 · 사업구조 개편 비교)</h3>
+
+<p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 6px;">
+원본 PDF 페이지 2는 좌측에 '25년도 사업구조 표(4행), 우측에 '26년도 사업구조 표(8행, 병합 셀)가 좌우로 배치된 비교형 레이아웃.
+</p>
+
+<div class="compare-grid">
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge upstage">UPSTAGE</div>
+      <div class="col-header">부모 표 안 nested table로 매핑</div>
+      <div class="status ok">정확</div>
+    </div>
+    <p class="compare-sub">x좌표 기반으로 좌/우 단을 구분, 비교 의도까지 보존.</p>
+    <div class="nested-vis">
+<span class="outer">&lt;table&gt;</span> <span style="color: var(--text-muted);">← 부모 비교표</span><br>
+&nbsp;&nbsp;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;구 분&lt;/th&gt;&lt;th&gt;'25년도&lt;/th&gt;&lt;th&gt;'26년도&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;<br>
+&nbsp;&nbsp;&lt;tbody&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;tr&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;th&gt;사업구조 개편&lt;/th&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;<span class="inner">&lt;table&gt;[25년도 4행 표]&lt;/table&gt;</span>&lt;/td&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;td&gt;<span class="inner">&lt;table&gt;[26년도 8행 표]&lt;/table&gt;</span>&lt;/td&gt;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;/tr&gt; ...<br>
+<span class="outer">&lt;/table&gt;</span>
+    </div>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge corepin">COREPIN</div>
+      <div class="col-header">좌측 표를 paragraph로 분해</div>
+      <div class="status fail">실패</div>
+    </div>
+    <p class="compare-sub">위→아래 순서로 읽어 좌측 표를 텍스트 fragments로 분해.</p>
+    <div class="nested-vis">
+[26년도 표만 정상 table로 인식]<br>
+<br>
+↓ 그 다음 25년도 표가 paragraph로 흩뿌려짐<br>
+<br>
+<span class="text-fragment">내역사업 내내역사업</span><br>
+<span class="text-fragment">해외진출 경쟁형 전략형 소부장</span><br>
+<span class="text-fragment">수출지향형 (4년, 20억원)</span><br>
+<span class="text-fragment">사업구조 개편</span><br>
+<span class="text-fragment">민간투자연계 전략기술테마별프로젝트 전략형</span><br>
+<span class="text-fragment">시장확대형 (3년, 36억원)</span><br>
+<span class="text-fragment">일반 융자연계형 소부장 구조혁신</span><br>
+<span class="text-fragment">시장대응형 (2년, 5억원)</span>
+    </div>
+  </div>
+
+</div>
+
+<h3 class="sub">② 플로우차트 인식 (페이지 3 · 추진절차 8박스 도식)</h3>
+
+<p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 6px;">
+원본 PDF 페이지 3은 사업공고 → 신청·접수 → ... → 최종선정 → 재평가까지 8개 박스가 화살표로 연결된 워크플로우 도식.
+</p>
+
+<div class="compare-grid">
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge upstage">UPSTAGE</div>
+      <div class="col-header">figure 카테고리 + 자동 설명 텍스트</div>
+      <div class="status ok">인식</div>
+    </div>
+    <p class="compare-sub">도식 유형 자동 분류 + 영문 상세 설명 + base64 이미지 응답에 포함.</p>
+    <div class="figure-box">
+      <div class="figure-label">FIGURE id='53'</div>
+      <div class="figure-type">figure-type: diagram, flowchart, organizational chart, process map</div>
+      <div class="figure-content">
+        <strong>figure-description (자동 생성):</strong><br>
+        "This image displays a structured Korean-language flowchart illustrating a multi-stage administrative or evaluation process...
+        <br><br><strong>Top Row:</strong> 사업공고 → 신청·접수 → 신청자격 검토 → 선정평가 → 이의신청
+        <br><strong>Bottom Row:</strong> 과제관리 → 협약·정부지원금 지급 → 선정결과 통보 → 최종선정 → 재평가"
+        <br><br><span style="color: var(--text-muted); font-size: 11px;">+ 원본 이미지 base64 인코딩 응답에 포함 (LLM 입력에 즉시 활용 가능)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge corepin">COREPIN</div>
+      <div class="col-header">8개 별도 table로 분해, 화살표 텍스트화</div>
+      <div class="status fail">방향성 손실</div>
+    </div>
+    <p class="compare-sub">각 박스를 개별 table로 분리, 화살표 ➡를 paragraph로 인식.</p>
+    <div class="flow-vis">
+      <div class="flow-box bad">table: 사업공고</div>
+      <div class="flow-arrow">➡ (paragraph)</div>
+      <div class="flow-box bad">table: 신청·접수</div>
+      <div class="flow-arrow">➡ (paragraph)</div>
+      <div class="flow-box bad">table: 신청자격 검토</div>
+      <div class="flow-arrow">➡ (paragraph)</div>
+      <div class="flow-box bad">table: 선정평가</div>
+      <div class="flow-arrow">···</div>
+      <div class="flow-box bad">table: 과제관리</div>
+      <div class="flow-arrow">···</div>
+      <div class="flow-box bad">table: 협약·지급</div>
+      <div class="flow-arrow">···</div>
+      <div class="flow-box bad">table: 선정결과 통보</div>
+      <div class="flow-arrow">···</div>
+      <div class="flow-box bad">table: 최종선정 / 재평가</div>
+    </div>
+    <p style="font-size: 11.5px; color: var(--text-muted); margin: 12px 0 0; line-height: 1.6;">
+      각 박스의 텍스트는 추출되지만 <strong style="color: var(--danger);">박스 간 연결 관계와 방향성 완전 손실</strong>. 워크플로우 도식이 평탄한 표 8개로 분해됨.
+    </p>
+  </div>
+
+</div>
+
+<h3 class="sub">③ 병합 셀 (페이지 1 · 7컬럼 rowspan 표)</h3>
+
+<p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 6px;">
+원본 PDF 페이지 1 "주의사항" 표는 "하반기 (2차)"가 3행 rowspan, "글로벌선도"가 2행 rowspan, 우측 4컬럼은 모두 3행 rowspan으로 병합된 구조.
+</p>
+
+<div class="compare-grid">
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge upstage">UPSTAGE</div>
+      <div class="col-header">HTML 표준 rowspan/colspan 완벽 처리</div>
+      <div class="status ok">완벽</div>
+    </div>
+    <p class="compare-sub">scope="rowgroup" 속성까지 부여, 시맨틱 HTML 구조 그대로.</p>
+    <table class="rowspan-demo">
+      <thead><tr><th>구분</th><th>내역사업</th><th>세부과제</th><th>공고</th><th>신청·접수</th></tr></thead>
+      <tbody>
+        <tr><td class="merged" rowspan="3">하반기<br>(2차)</td><td class="merged" rowspan="2">글로벌선도</td><td>수출지향형</td><td class="merged" rowspan="3">5월 15일</td><td class="merged" rowspan="3">6월 1일~6월 15일</td></tr>
+        <tr><td>점프업</td></tr>
+        <tr><td>유망기술개발</td><td>소부장</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size: 11px; color: var(--text-muted); margin: 10px 0 0;">
+      HTML: <code>&lt;th rowspan="3"&gt;하반기 (2차)&lt;/th&gt;</code>, <code>&lt;td rowspan="3"&gt;5월 15일&lt;/td&gt;</code>
+    </p>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge corepin">COREPIN</div>
+      <div class="col-header">rowspan 영역 셀 누락</div>
+      <div class="status fail">데이터 손실</div>
+    </div>
+    <p class="compare-sub">병합 영역의 셀이 채워지지 않고 그대로 비어버림.</p>
+    <table class="rowspan-demo">
+      <thead><tr><th>구분</th><th>내역사업</th><th>세부과제</th><th>공고</th><th>신청·접수</th></tr></thead>
+      <tbody>
+        <tr><td>하반기 (2차)</td><td>글로벌선도</td><td>수출지향형</td><td>5월 15일</td><td>6월 1일~15일</td></tr>
+        <tr><td class="missing">(빈 셀)</td><td class="missing">(빈 셀)</td><td>점프업</td><td class="missing">(빈 셀)</td><td class="missing">(빈 셀)</td></tr>
+        <tr><td class="missing">(빈 셀)</td><td>유망기술개발</td><td>소부장</td><td class="missing">(빈 셀)</td><td class="missing">(빈 셀)</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size: 11px; color: var(--text-muted); margin: 10px 0 0;">
+      셀 7개 × 3행 = 총 21개 중 <strong style="color: var(--danger);">10개 셀 데이터 누락</strong>. rowspan 정보 없이 그대로 비어버림.
+    </p>
+  </div>
+
+</div>
+
+<div class="legend">
+  <span class="chip danger"></span><strong style="color: var(--text); font-weight: 500;">빨간 음영/점선</strong> = Corepin 출력의 구조 결함 구간. (1) 좌측 표를 paragraph fragments로 분해, (2) 플로우차트 박스 간 연결 관계 손실, (3) rowspan 영역 셀 데이터 누락.<br>
+  <span class="chip success"></span><strong style="color: var(--text); font-weight: 500;">초록 음영</strong> = Upstage 출력에서 정확히 인식·매핑된 구조.
+</div>
+
+<h2>elements 배열 응답 구조 (Upstage DP)</h2>
+
+<div class="compare-grid">
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge upstage">UPSTAGE</div>
+      <div class="col-header">category + coordinates + content.html</div>
+      <div class="status ok">완료</div>
+    </div>
+    <p class="compare-sub">document-parse-260128 · 62개 element · enhanced: [1,2,3]</p>
+<pre class="output-text">{
+  "api": "2.0",
+  "model": "document-parse-260128",
+  "elements": [
+    {
+      "category": <span class="ok-h">"table"</span>,
+      "content": {
+        "html": "&lt;table&gt;&lt;thead&gt;...&lt;th rowspan=\"3\"&gt;
+                 하반기 (2차)&lt;/th&gt;...&lt;/table&gt;"
+      },
+      "coordinates": <span class="ok-h">[
+        {"x": 0.0646, "y": 0.3869},
+        {"x": 0.4507, "y": 0.3869},
+        {"x": 0.4507, "y": 0.4879},
+        {"x": 0.0646, "y": 0.4879}
+      ]</span>,
+      "id": 6,
+      "page": 1
+    },
+    {
+      "category": <span class="ok-h">"figure"</span>,
+      "content": {
+        "html": "&lt;figure&gt;&lt;img data-coord=\"...\"/&gt;
+                 &lt;figcaption&gt;
+                   &lt;p class=\"figure-type\"&gt;
+                     diagram,flowchart,...&lt;/p&gt;
+                   &lt;p class=\"figure-description\"&gt;
+                     Top Row: 사업공고 → ...&lt;/p&gt;
+                 &lt;/figcaption&gt;&lt;/figure&gt;"
+      },
+      "base64_encoding": "/9j/2wCEAAIBAQE...",
+      "coordinates": [...],
+      "page": 3
+    },
+    ...
+  ],
+  "usage": {
+    "enhanced": <span class="ok-h">[1, 2, 3]</span>,
+    "pages": 3
+  }
+}</pre>
+  </div>
+
+  <div class="compare-card">
+    <div class="compare-head">
+      <div class="badge corepin">COREPIN</div>
+      <div class="col-header">blocks 배열 (4종 카테고리)</div>
+      <div class="status fail">정보 부족</div>
+    </div>
+    <p class="compare-sub">doc-2026.05 · paragraph/heading/table/list만</p>
+<pre class="output-text">{
+  "text": "중소벤처기업부 공고...",
+  "markdown": "...",
+  "blocks": [
+    {
+      "type": "paragraph",
+      "text": "중소벤처기업부 공고 제2026-334호"
+    },
+    {
+      "type": "heading",
+      "level": 1,
+      "text": "2026년도 중소기업기술혁신개발사업..."
+    },
+    {
+      "type": <span class="err">"table"</span>,
+      "rows": [
+        [...],
+        [{"text": "점프업"}],          <span style="color: var(--text-faint);">// 셀 1개만</span>
+        [{"text": "유망기술개발"}, {"text": "소부장"}]
+      ]                                <span style="color: var(--text-faint);">// rowspan 셀 누락</span>
+    },
+    {
+      "type": <span class="err">"paragraph"</span>,        <span style="color: var(--text-faint);">// 플로우차트 박스를</span>
+      "text": "사업공고"               <span style="color: var(--text-faint);">// table로 분리</span>
+    },
+    {
+      "type": <span class="err">"paragraph"</span>,
+      "text": "➡"                     <span style="color: var(--text-faint);">// 화살표를 paragraph로</span>
+    },
+    ...
+  ]
+  <span class="err">// coordinates 필드 없음
+  // figure 카테고리 없음
+  // base64 이미지 없음</span>
+}</pre>
+  </div>
+
+</div>
+
+<h2>핵심 시사점</h2>
+
+<div class="takeaways">
+  <div class="takeaway-card">
+    <h3>1. 다단 레이아웃의 본질적 차이 — Reading Order의 의미</h3>
+    <p>좌/우 병렬 배치된 표를 Corepin은 <strong>위→아래 순서로 읽어 좌측 표를 텍스트 fragments로 분해</strong>. Upstage는 <strong>x좌표 기반으로 좌/우 단을 구분</strong>, 부모 비교표 안의 nested table 두 개로 정확히 매핑하며 비교 의도까지 보존. 한국 공문, 약관, 재무제표, IR 자료 등 다단 레이아웃이 핵심인 문서에서 격차가 결정적으로 벌어짐. 단순히 "표 인식률"이 아니라 <strong>2D 공간 이해의 본질적 차이</strong>.</p>
+  </div>
+
+  <div class="takeaway-card">
+    <h3>2. 플로우차트의 figure 인식 — LLM 파이프라인 가치</h3>
+    <p>Corepin은 도식을 평탄한 표들로 분해하여 박스 간 연결 관계와 방향성 완전 손실. Upstage는 figure 카테고리로 인식하고 <strong>도식 유형 자동 분류(diagram/flowchart/organizational chart) + 영문 상세 설명 텍스트 + 원본 base64 이미지</strong>까지 응답에 포함. RAG 파이프라인에서 LLM이 도식의 의미를 즉시 이해할 수 있음. IR 자료의 조직도, 약관의 청구 흐름도, 학술 논문의 다이어그램 등에서 결정적 격차.</p>
+  </div>
+
+  <div class="takeaway-card">
+    <h3>3. bbox 좌표의 비즈니스 가치 — 자동화 후처리 가능 여부</h3>
+    <p>Upstage는 모든 element에 4-vertex polygon 좌표 제공. RAG 답변 시 <strong>페이지 참조, 하이라이트, 영역 검출, 사용자 검증 UI</strong> 모두 가능. Corepin은 좌표 정보 일체 없음 — 자동화 후처리 불가능, 사람 검수 필수. OCR 케이스(Appendix C/D)에서 본 word/line bbox 부재와 동일한 패턴이 DP 레이어에서도 일관됨. Corepin은 "출력만 받으면 된다"는 단순 변환 시나리오에 최적화, Upstage는 "출력을 다시 가공해서 시스템에 통합한다"는 자동화 시나리오에 최적화.</p>
+  </div>
+</div>
+
+<footer>
+  <span>Upstage DP 팀 · TPM 작성 · 2026.05</span>
+  <span>비교 모델: document-parse-260128 (Enhanced) vs doc-2026.05 · 실측 1건 (Songki 확인 필요)</span>
+</footer>
+
+</div>
+</body>
+</html>
