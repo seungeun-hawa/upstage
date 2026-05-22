@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>한국 공문 DP 시각 비교 — Original vs Upstage vs Corepin</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card-bg: #161b22;
+    --card-bg-alt: #1c2128;
+    --border: #30363d;
+    --border-strong: #484f58;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-faint: #6e7681;
+    --accent: #a78bfa;
+    --accent-bg: rgba(167, 139, 250, 0.15);
+    --success: #56d364;
+    --success-bg: rgba(86, 211, 100, 0.12);
+    --success-border: rgba(86, 211, 100, 0.4);
+    --danger: #f85149;
+    --danger-bg: rgba(248, 81, 73, 0.12);
+    --danger-border: rgba(248, 81, 73, 0.4);
+    --warning: #d29922;
+    --warning-bg: rgba(210, 153, 34, 0.15);
+    --upstage-purple: #7c3aed;
+    --upstage-bg: rgba(124, 58, 237, 0.15);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1900px; margin: 0 auto; padding: 48px 32px 80px; }
+
+  header.page-header { text-align: center; margin-bottom: 32px; }
+  h1 { font-size: 28px; font-weight: 600; margin: 0 0 8px;
+    color: var(--accent); letter-spacing: -0.01em; }
+  .page-subtitle { color: var(--text-muted); font-size: 13.5px; margin: 0; line-height: 1.7; }
+  .page-meta { display: inline-flex; gap: 18px; margin-top: 14px; font-size: 11.5px;
+    color: var(--text-faint); flex-wrap: wrap; justify-content: center; }
+  .page-meta strong { color: var(--text-muted); font-weight: 500; }
+  .standard-highlight { display: inline-block; padding: 3px 10px; background: var(--success-bg);
+    color: var(--success); border-radius: 4px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--success-border); margin-top: 8px; }
+
+  /* ORIGINAL */
+  .original-section { margin-bottom: 48px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .original-header { padding: 16px 22px; background: var(--accent-bg);
+    border-bottom: 1px solid var(--accent); display: flex; align-items: center; gap: 12px; }
+  .original-tag { display: inline-block; font-size: 11px; font-weight: 600;
+    color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase; }
+  .original-tag-text { font-size: 13.5px; color: var(--text); font-weight: 500; }
+  .original-meta { margin-left: auto; font-size: 11px; color: var(--text-faint); }
+
+  .original-image-wrapper { background: #fff; padding: 20px; display: flex;
+    justify-content: center; }
+  .original-image-wrapper img { max-width: 100%; height: auto; display: block; border-radius: 4px; }
+
+  /* COMPARISON */
+  .comparison-section { margin-bottom: 40px; }
+  .comparison-intro { text-align: center; margin-bottom: 24px; }
+  .comparison-intro h2 { font-size: 20px; font-weight: 500; margin: 0 0 6px; color: var(--accent); }
+  .comparison-intro p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  .compare-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 16px; }
+  .col { background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; }
+  .col-header { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .col-header.original-col { background: var(--accent-bg); border-bottom-color: var(--accent); }
+  .col-header.upstage { background: var(--upstage-bg); border-bottom-color: var(--upstage-purple); }
+  .col-header.corepin { background: var(--card-bg-alt); border-bottom-color: var(--border-strong); }
+  .col-title { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+  .col-title.original-col { color: var(--accent); }
+  .col-title.upstage { color: var(--upstage-purple); }
+  .col-title.corepin { color: var(--text-muted); }
+
+  /* Original column image */
+  .original-col-image { background: #fff; border-radius: 6px; padding: 8px;
+    border: 1px solid var(--border-strong); }
+  .original-col-image img { width: 100%; height: auto; display: block; border-radius: 3px; }
+  .col-meta { font-size: 11.5px; color: var(--text-faint); line-height: 1.7; }
+  .col-meta .badge-mini { display: inline-block; padding: 2px 7px; background: var(--card-bg);
+    color: var(--text-muted); border-radius: 3px; font-size: 10px; margin-right: 6px;
+    border: 1px solid var(--border); }
+  .col-meta .badge-mode { background: var(--success-bg); color: var(--success);
+    border-color: var(--success-border); font-weight: 500; }
+  .col-status { display: inline-block; font-size: 10px; font-weight: 500;
+    padding: 2px 8px; border-radius: 3px; margin-top: 6px;
+    letter-spacing: 0.04em; text-transform: uppercase; }
+  .col-status.ok { background: var(--success-bg); color: var(--success);
+    border: 1px solid var(--success-border); }
+  .col-status.fail { background: var(--danger-bg); color: var(--danger);
+    border: 1px solid var(--danger-border); }
+  .col-body { padding: 20px 18px; }
+
+  /* UPSTAGE result */
+  .upstage-result { background: var(--card-bg-alt); border: 1.5px solid var(--success);
+    border-radius: 6px; padding: 16px; }
+  .upstage-result-label { font-size: 11px; color: var(--success); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px; }
+  .upstage-result-label::before { content: ""; width: 6px; height: 6px;
+    background: var(--success); border-radius: 50%; }
+
+  .upstage-element-meta { background: var(--bg); padding: 10px 12px; border-radius: 4px;
+    border: 1px solid var(--success-border); margin-bottom: 12px; font-size: 10.5px;
+    font-family: monospace; color: var(--success); line-height: 1.7; }
+  .upstage-element-meta strong { color: var(--text); font-weight: 500; }
+
+  /* Upstage parent table - 실제 JSON 구조 그대로 */
+  .upstage-parent-table { width: 100%; border-collapse: collapse; font-size: 10.5px;
+    background: var(--bg); }
+  .upstage-parent-table > thead > tr > td,
+  .upstage-parent-table > tbody > tr > td,
+  .upstage-parent-table > thead > tr > th,
+  .upstage-parent-table > tbody > tr > th {
+    border: 1.5px solid var(--success-border); padding: 7px 8px; vertical-align: middle;
+    color: var(--text); text-align: center; }
+  .upstage-parent-table > thead > tr > td { background: var(--success-bg);
+    color: var(--success); font-weight: 600; }
+  .upstage-parent-table > tbody > tr > td.row-label { background: var(--success-bg);
+    color: var(--success); font-weight: 500; }
+  .upstage-parent-table td.nested-host { padding: 3px; background: rgba(86, 211, 100, 0.04); }
+  
+  .nested-table { width: 100%; border-collapse: collapse; font-size: 9.5px;
+    background: var(--card-bg); }
+  .nested-table td {
+    border: 1px solid var(--border); padding: 4px 5px; color: var(--text);
+    text-align: center; vertical-align: middle; }
+  .nested-table thead td { background: var(--card-bg-alt); color: var(--text-muted);
+    font-weight: 500; font-size: 9px; }
+
+  /* 기타사항 행 텍스트 */
+  .row-content-text { text-align: left; padding: 6px 8px !important; font-size: 9.5px;
+    line-height: 1.55; color: var(--text); }
+
+  /* COREPIN */
+  .corepin-result { background: var(--card-bg-alt); border: 1.5px solid var(--danger);
+    border-radius: 6px; padding: 16px; }
+  .corepin-result-label { font-size: 11px; color: var(--danger); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px; }
+  .corepin-result-label::before { content: ""; width: 6px; height: 6px;
+    background: var(--danger); border-radius: 50%; }
+
+  .corepin-block-meta { background: var(--bg); padding: 10px 12px; border-radius: 4px;
+    border: 1px solid var(--danger-border); margin-bottom: 12px; font-size: 10.5px;
+    font-family: monospace; color: var(--danger); line-height: 1.7; }
+  .corepin-block-meta strong { color: var(--text); font-weight: 500; }
+
+  .corepin-paragraph { background: var(--bg); border: 1px solid var(--danger);
+    border-radius: 4px; padding: 16px; font-size: 11.5px; line-height: 1.85;
+    color: var(--text); max-height: 700px; overflow-y: auto;
+    border-left: 4px solid var(--danger); }
+  .corepin-paragraph::before { content: "type: paragraph · pageNumber: 1 (block 1/1)";
+    display: block; font-size: 10px; color: var(--danger);
+    font-family: monospace; margin-bottom: 10px; padding-bottom: 8px;
+    border-bottom: 1px dashed var(--danger); letter-spacing: 0.03em; }
+
+  .ocr-error { background: var(--warning-bg); color: var(--warning);
+    padding: 1px 5px; border-radius: 3px; font-weight: 500;
+    border-bottom: 1.5px solid var(--warning); }
+  .ocr-error[data-correct]::after { content: " (→ " attr(data-correct) ")";
+    font-size: 9.5px; color: var(--text-faint); font-weight: 400;
+    background: var(--card-bg); padding: 1px 4px; border-radius: 2px; margin-left: 2px;
+    border: 1px solid var(--border); }
+
+  /* SUMMARY */
+  .summary { margin-top: 48px; padding: 28px 32px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 10px; }
+  .summary h2 { font-size: 16px; font-weight: 500; margin: 0 0 18px; color: var(--accent); }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .summary-table th, .summary-table td {
+    padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .summary-table th { color: var(--text-muted); font-weight: 500;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table .pos { color: var(--success); }
+  .summary-table .neg { color: var(--danger); }
+  .summary-table td:first-child { color: var(--text-muted); font-size: 11.5px; }
+
+  .legend { margin-top: 24px; padding: 14px 18px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+    color: var(--text-muted); line-height: 1.7; }
+  .legend strong { color: var(--text); font-weight: 500; }
+
+  footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);
+    text-align: center; font-size: 11px; color: var(--text-faint); }
+
+  @media (max-width: 1100px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .container { padding: 32px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="page-header">
+  <h1>한국 공문 복합 레이아웃 인식 실측 비교</h1>
+  <p class="page-subtitle">
+    중소벤처기업부 공고 페이지 2 — 사업구조 개편 표 / 중점지원분야 표 / 기타사항 영역<br>
+    같은 PDF 페이지를 두 제품이 어떻게 다르게 이해하는가
+  </p>
+  <div class="page-meta">
+    <span><strong>대상</strong> 중소벤처기업부 공고 제2026-334호 · 페이지 2</span>
+    <span><strong>Upstage</strong> document-parse-260128 (Standard)</span>
+    <span><strong>Corepin</strong> doc-2026.05</span>
+  </div>
+  <div class="standard-highlight">⚡ Upstage는 Standard 모드로도 이만큼 인식 (Enhanced 없이도)</div>
+</header>
+
+<!-- 원본 -->
+<div class="original-section">
+  <div class="original-header">
+    <span class="original-tag">Original</span>
+    <span class="original-tag-text">sample_announcement.pdf — 페이지 2</span>
+    <span class="original-meta">사업구조 개편 / 중점지원분야 / 기타사항 (예외적용·가점·서식·산정기준·전략수립)</span>
+  </div>
+  <div class="original-image-wrapper">
+    <img src="korean_announcement_p2.png" alt="중소벤처기업부 공고 페이지 2 원본">
+  </div>
+</div>
+
+<!-- 비교 -->
+<div class="comparison-section">
+  <div class="comparison-intro">
+    <h2>원본 PDF vs 두 제품의 파싱 결과</h2>
+    <p>원본 페이지를 두 제품이 어떻게 다르게 이해하는지 나란히 비교 — 같은 PDF, 다른 결과</p>
+  </div>
+
+  <div class="compare-grid">
+
+    <!-- ORIGINAL COLUMN -->
+    <div class="col">
+      <div class="col-header original-col">
+        <div class="col-title original-col">Original</div>
+        <div class="col-meta">
+          <span class="badge-mini">sample_announcement.pdf</span>
+          <span class="badge-mini">페이지 2</span>
+          <br>
+          중소벤처기업부 공고 제2026-334호 · 사업구조 개편 / 중점지원분야 / 기타사항
+          <br>
+          <span class="col-status" style="background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent);">원본 PDF 페이지</span>
+        </div>
+      </div>
+      <div class="col-body">
+        <div class="original-col-image">
+          <img src="korean_announcement_p2.png" alt="중소벤처기업부 공고 페이지 2 원본">
+        </div>
+      </div>
+    </div>
+
+    <!-- UPSTAGE -->
+    <div class="col">
+      <div class="col-header upstage">
+        <div class="col-title upstage">Upstage Document Parse</div>
+        <div class="col-meta">
+          <span class="badge-mini">document-parse-260128</span>
+          <span class="badge-mini badge-mode">Standard 모드</span>
+          <br>
+          Elements: 3 (heading1, table, footer) | Nested table: 4개 | rowspan="5": ✓ | bbox: ✓
+          <br>
+          <span class="col-status ok">단일 table에 전체 영역 통합 인식</span>
+        </div>
+      </div>
+      <div class="col-body">
+        <div class="upstage-result">
+          <div class="upstage-result-label">실제 JSON elements[1] · category=table · 부모 표 안 nested table 4개</div>
+
+          <div class="upstage-element-meta">
+            elements: [<br>
+            &nbsp;&nbsp;{ id: 0, category: <strong>"heading1"</strong>, html: "&lt;h1&gt;2. 주요변경 또는 개선사항&lt;/h1&gt;" },<br>
+            &nbsp;&nbsp;{ id: 1, category: <strong>"table"</strong>, coordinates: [4-vertex polygon] },<br>
+            &nbsp;&nbsp;{ id: 2, category: <strong>"footer"</strong>, html: "&lt;footer&gt;- 2 -&lt;/footer&gt;" }<br>
+            ]
+          </div>
+
+          <table class="upstage-parent-table">
+            <thead>
+              <tr>
+                <td rowspan="2">구 분</td>
+                <td colspan="3">주요 변경·개선 사항</td>
+              </tr>
+              <tr>
+                <td></td>
+                <td>'25년도</td>
+                <td>'26년도</td>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 사업구조 개편 -->
+              <tr>
+                <td class="row-label">사업구조 개편</td>
+                <td></td>
+                <td class="nested-host">
+                  <table class="nested-table">
+                    <thead><tr><td>내역사업</td><td>내내역사업</td></tr></thead>
+                    <tbody>
+                      <tr><td rowspan="4">수출지향형<br>(4년, 20억원)</td><td>해외진출</td></tr>
+                      <tr><td>경쟁형</td></tr>
+                      <tr><td>전략형</td></tr>
+                      <tr><td>소부장</td></tr>
+                      <tr><td rowspan="3">시장확대형<br>(3년, 36억원)</td><td>민간투자연계</td></tr>
+                      <tr><td>전략기술테마별프로젝트</td></tr>
+                      <tr><td>전략형</td></tr>
+                      <tr><td rowspan="4">시장대응형<br>(2년, 5억원)</td><td>일반</td></tr>
+                      <tr><td>융자연계형</td></tr>
+                      <tr><td>소부장</td></tr>
+                      <tr><td>구조혁신</td></tr>
+                    </tbody>
+                  </table>
+                </td>
+                <td class="nested-host">
+                  <table class="nested-table">
+                    <thead><tr><td>내역사업</td><td colspan="2">내내역사업</td></tr></thead>
+                    <tbody>
+                      <tr><td rowspan="2">글로벌선도<br>기술개발</td><td colspan="2">수출지향형 (2년, 10억원)</td></tr>
+                      <tr><td colspan="2">글로벌협력형 (5년, 25억원)</td></tr>
+                      <tr><td rowspan="6">중소기업<br>유망기술개발</td><td rowspan="3">국가<br>전략<br>기술</td><td>도메인특화 AI (2년, 100억원)</td></tr>
+                      <tr><td>AI후보물질 (2년, 10억원)</td></tr>
+                      <tr><td>신약파이프라인 (3년, 30억원)</td></tr>
+                      <tr><td colspan="2">구조혁신 (2년, 5억원)</td></tr>
+                      <tr><td colspan="2">소부장 (2년, 5억원)</td></tr>
+                      <tr><td colspan="2">일반(K-뷰티, 소셜벤처, 초격차)<br>(2년, 5억원)</td></tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- 중점지원분야 -->
+              <tr>
+                <td colspan="2" class="row-label">중점지원분야 (품목)</td>
+                <td class="nested-host">
+                  <table class="nested-table">
+                    <thead><tr><td colspan="2">구분</td><td>분야 및 품목</td></tr></thead>
+                    <tbody>
+                      <tr><td colspan="2">국가전략기술·탄소중립</td><td>124개 전략품목</td></tr>
+                      <tr><td rowspan="4">중소기업<br>전략기술<br>로드맵</td><td>미래혁신 선도</td><td>9대 분야, 57개 품목</td></tr>
+                      <tr><td>탄소중립이행</td><td>8대 분야, 47개 품목</td></tr>
+                      <tr><td>성장동력 고도화</td><td>11대 분야, 60개 품목</td></tr>
+                      <tr><td>新디지털 전환</td><td>11대 분야, 54개 품목</td></tr>
+                      <tr><td colspan="2">소·부·장</td><td>9개 분야, 113개 품목</td></tr>
+                    </tbody>
+                  </table>
+                </td>
+                <td class="nested-host">
+                  <table class="nested-table">
+                    <thead><tr><td>구분</td><td>분야 및 품목</td></tr></thead>
+                    <tbody>
+                      <tr><td>국가전략기술·<br>탄소중립전략품목</td><td>124개 전략품목</td></tr>
+                      <tr><td>중소기업전략<br>기술로드맵</td><td>13대 분야, 272개 품목</td></tr>
+                      <tr><td>소재·부품·장비</td><td>9대 분야, 137개 품목</td></tr>
+                      <tr><td>초혁신경제분야</td><td>3대 분야, 15개 품목</td></tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- 기타사항 (rowspan="5") -->
+              <tr>
+                <td class="row-label" rowspan="5">기타사항</td>
+                <td class="row-label">예외적용<br>(신청, 지원<br>제외사항)</td>
+                <td class="row-content-text">· &lt;신 설&gt;<br>· 공공기관 및 한국벤처캐피탈협회(KVCA) 회원사로부터의 대출형 투자금(CB, BW, 상환전환우선주(RCPS))를 통한 신규 차입금은 부채총액에서 제외</td>
+                <td class="row-content-text">· 공고 접수마감일 기준 부채비율 1,000% 미만 이고, 자본전액잠식 상태를 해소한 경우 예외<br>* 당해 수정 재무제표와 외부 회계법인의 의견서 제출<br>· 「벤처투자법」에 따른 벤처투자 유형에 해당하는 투자금은 부채 총액 계산 시 제외<br>· 「벤처투자법」, 「여신전문금융업법」에 따른 투자기관 확대</td>
+              </tr>
+              <tr>
+                <td class="row-label">가점</td>
+                <td class="row-content-text">· 최근 3년 이내 중소벤처기업부 장관 포상을 받은 기업<br>· &lt;신 설&gt;</td>
+                <td class="row-content-text">· 대통령, 국무총리 포상 및 시상을 포함하여 정부 표창 가점 인정 범위 확대<br>· 비수도권 소재 기업에 대한 가점 신설(2점)</td>
+              </tr>
+              <tr>
+                <td class="row-label">사업신청<br>관련 서식</td>
+                <td class="row-content-text">· 신규인력 채용(예정) 확인서<br>· 연구자의 동시수행과제 제한(3책5공) 기준 준수 확인서</td>
+                <td class="row-content-text">· &lt;삭 제&gt;<br>· &lt;삭 제&gt;<br>· 사전검토 및 선정평가 자료로 활용되지 않는 서류는 협약시 제출로 개선</td>
+              </tr>
+              <tr>
+                <td class="row-label">비목별<br>산정기준</td>
+                <td class="row-content-text">· 창업일로부터 7년 이내 중소기업은 기존인력 인건비 현금 계상 가능<br>· &lt;신 설&gt;</td>
+                <td class="row-content-text">· &lt;좌 동&gt;<br>· 창업일로부터 10년 이내의 신산업 분야 창업기업(중소기업창업지원법 제25조제4항)도 기존인력 인건비를 현금으로 계상 가능</td>
+              </tr>
+              <tr>
+                <td class="row-label">해외진출<br>전략수립</td>
+                <td class="row-content-text">· (해외진출 전략수립) "수출지향형" 內 "해외진출R&amp;D" 선정과제 연계 지원</td>
+                <td class="row-content-text">· (해외진출 전략수립) "수출지향형" 全과제 연계지원 확대(선택사항)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- COREPIN -->
+    <div class="col">
+      <div class="col-header corepin">
+        <div class="col-title corepin">Corepin Document Parse</div>
+        <div class="col-meta">
+          <span class="badge-mini">doc-2026.05</span>
+          <br>
+          Blocks: <strong style="color: var(--danger);">paragraph 1개</strong> | table: <strong style="color: var(--danger);">0개</strong> | bbox: ✗ | figure: ✗
+          <br>
+          <span class="col-status fail">페이지 전체 평탄화 + OCR 오류 17+</span>
+        </div>
+      </div>
+      <div class="col-body">
+        <div class="corepin-result">
+          <div class="corepin-result-label">실제 JSON · 페이지 2 전체가 paragraph 1개로 통합</div>
+
+          <div class="corepin-block-meta">
+            blocks: [<br>
+            &nbsp;&nbsp;{ type: <strong>"paragraph"</strong>, text: "...", pageNumber: 1 }<br>
+            ] · 총 1개 block (테이블·heading 카테고리 미사용)
+          </div>
+
+          <div class="corepin-paragraph">
+2. 주요변경 또는 개선사항 구 분 주요 변경·개선 사항 '25년도 '26년도 내역사업 내내역사업 내역사업 <span class="ocr-error" data-correct="글로벌선도">글로벌신도</span> 기술개발 수출지향형 (4년, <span class="ocr-error" data-correct="20억원">10억원</span>) <span class="ocr-error" data-correct="경쟁형">걱정형</span> 전략형 소부장 시장확대형 (3년, 36억원) 민간투자연계 전략기술테마별프로젝트 전략형 일반 <span class="ocr-error" data-correct="융자연계형">움직임계형</span> 소부장 구조혁신 중소기업 <span class="ocr-error" data-correct="유망기술개발">유전노평생</span> 국가 전략 기술 도메인특화 AI (2년, <span class="ocr-error" data-correct="100억원">10억원</span>) AI후보물질 (2년, 10억원) 신약파이프라인 (<span class="ocr-error" data-correct="3년">8년</span>, 30억원) 구조혁신 (2년, 5억원) 소부장 (2년, 5억원) 일반(K-뷰티, 소셜벤처, 초격차) (2년, 5억원) 중점지원분야 (품목) 구분 분야 및 품목 국가전략기술·탄소중립 국가전략기술·탄소중립 124개 전략품목 중소기업 전략기술 로드맵 미래혁신 선도 탄소중립이행 탄소중립이행 8대 분야 47개 품목 <span class="ocr-error" data-correct="성장동력">생동력</span> 고도화 新디지털 전환 11대 분야 60개 품목 소재부품장비 소부·장 소·부·장 9개 분야 113개 품목 구분 분야 및 품목 <span class="ocr-error" data-correct="국가전략기술·탄소중립품목">국가전략기술·탄소중립뷰틀목</span> 중소기업 전략 기술로드맵 124개 전략품목 13대 분야, 272개 품목 소재부품장비 9대 분야, 137개 품목 <span class="ocr-error" data-correct="초혁신경제분야">조혁신경제분야</span> 3대 분야, 15개 품목 예외적용 (신청 지원 제외사항) • &lt;신 설&gt; • 공공기관 및 한국벤처캐피탈협회(KVCA) 회원사로부터의 대출형 투자금(CB, BW, <span class="ocr-error" data-correct="상환전환우선주">상황진환우선주</span>(RCPS))를 통한 신규 차입금은 부채총액에서 제외 • 공고 <span class="ocr-error" data-correct="접수마감일">접수미장일</span> 기존 부채비율 1,000% 미만 이미 <span class="ocr-error" data-correct="자본전액잠식">자본전액평식</span> 상태를 해소한 경우 <span class="ocr-error" data-correct="예외">에외</span> * 당해 수정 재무제표와 외부 회계법인의 의견서 제출(기관 자체 가결산자료 제외) • '<span class="ocr-error" data-correct="벤처투자법">벤쳐투자법</span>'에 따른 <span class="ocr-error" data-correct="벤처투자">벤쳐투자</span> 유형에 해당하는 투자금은 부채 <span class="ocr-error" data-correct="총액">충액</span> 계산 시 제외 • 「<span class="ocr-error" data-correct="벤처투자법">벤쳐투자법</span>」,「<span class="ocr-error" data-correct="여신전문금융업법">여신전문급읍업법</span>」에 따른 투자기관 확대 <span class="ocr-error" data-correct="가점">가집</span> • 최근 3년 이내 중소벤처기업부 장관 포상을 받은 기업 • &lt;신 설&gt; • 대통령, 국무총리 포상 및 시상을 포함하여 정부 <span class="ocr-error" data-correct="포상">포창</span> <span class="ocr-error" data-correct="가점">기점</span> 인정 범위 확대 • 비수도권 소재 기업에 대한 <span class="ocr-error" data-correct="가점">가정</span> 신설(2점) 사
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="legend">
+  <strong style="color: var(--warning);">노란 음영</strong> = Corepin OCR 인식 오류 (괄호 안은 원본 PDF의 정답).
+  페이지 2 한 페이지에서만 <strong style="color: var(--warning);">17개 이상의 OCR 오류</strong>가 발견되었으며, 동시에 표 구조가 완전히 평탄화되어 셀 간 구분이 불가능합니다.
+</div>
+
+<div class="summary">
+  <h2>한눈에 정리</h2>
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th style="width: 240px;">평가축</th>
+        <th>Upstage Document Parse (Standard)</th>
+        <th>Corepin Document Parse</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>처리 모드</td>
+        <td class="pos">Standard 모드 (Enhanced 없이도 이만큼 처리)</td>
+        <td class="neg">단일 모드</td>
+      </tr>
+      <tr>
+        <td>Element 구조</td>
+        <td class="pos">3 elements (heading1 + table + footer) — 페이지 구조 카테고리별 분리</td>
+        <td class="neg">paragraph 단 1개로 페이지 전체 통합</td>
+      </tr>
+      <tr>
+        <td>표 인식</td>
+        <td class="pos">단일 부모 table 안에 nested table 4개로 사업구조·중점지원분야 모두 인식</td>
+        <td class="neg">table 카테고리 자체 미사용 — 모든 셀 데이터가 paragraph 텍스트에 흘려 들어감</td>
+      </tr>
+      <tr>
+        <td>좌/우 병렬 표 (사업구조 개편)</td>
+        <td class="pos">nested table 2개로 정확 매핑 — '25년 11행 표, '26년 8행 표 (rowspan 포함)</td>
+        <td class="neg">"수출지향형 ... 글로벌신도 기술개발 ..." 식으로 좌우 표가 한 줄에 섞임</td>
+      </tr>
+      <tr>
+        <td>rowspan 처리</td>
+        <td class="pos">기타사항 행 rowspan="5", 수출지향형 rowspan="4", 중소기업 유망기술개발 rowspan="6" 등 모두 정확</td>
+        <td class="neg">셀 병합 정보 일체 없음</td>
+      </tr>
+      <tr>
+        <td>기타사항 5개 항목</td>
+        <td class="pos">예외적용·가점·서식·산정기준·전략수립 각 행이 별도 tr로 구분, '25/'26 셀 분리</td>
+        <td class="neg">항목 구분 없이 paragraph 1개에 통합 — 어느 항목 내용인지 추론 불가</td>
+      </tr>
+      <tr>
+        <td>OCR 정확도</td>
+        <td class="pos">글로벌선도, 경쟁형, 융자연계형, 여신전문금융업법 등 정확 인식</td>
+        <td class="neg">17+ OCR 오류 (글로벌신도, 걱정형, 유전노평생, 여신전문급읍업법, 8년/30억원 등)</td>
+      </tr>
+      <tr>
+        <td>bbox 좌표</td>
+        <td class="pos">모든 element에 4-vertex polygon — 표 영역 (0.0645, 0.1332) ~ (0.8946, 0.9324) 정확 추출</td>
+        <td class="neg">일체 없음</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  Upstage DP 팀 · TPM 작성 · 2026.05 · 비교 모델 document-parse-260128 (Standard) vs doc-2026.05 · 페이지 2 실측
+</footer>
+
+</div>
+</body>
+</html>
