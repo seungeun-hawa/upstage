@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>차트 DP 시각 비교 — Original vs Upstage vs Corepin</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card-bg: #161b22;
+    --card-bg-alt: #1c2128;
+    --border: #30363d;
+    --border-strong: #484f58;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-faint: #6e7681;
+    --accent: #a78bfa;
+    --accent-bg: rgba(167, 139, 250, 0.15);
+    --success: #56d364;
+    --success-bg: rgba(86, 211, 100, 0.12);
+    --success-border: rgba(86, 211, 100, 0.4);
+    --danger: #f85149;
+    --danger-bg: rgba(248, 81, 73, 0.12);
+    --danger-border: rgba(248, 81, 73, 0.4);
+    --warning: #d29922;
+    --warning-bg: rgba(210, 153, 34, 0.15);
+    --upstage-purple: #7c3aed;
+    --upstage-bg: rgba(124, 58, 237, 0.15);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1900px; margin: 0 auto; padding: 48px 32px 80px; }
+
+  header.page-header { text-align: center; margin-bottom: 32px; }
+  h1 { font-size: 28px; font-weight: 600; margin: 0 0 8px;
+    color: var(--accent); letter-spacing: -0.01em; }
+  .page-subtitle { color: var(--text-muted); font-size: 13.5px; margin: 0; line-height: 1.7; }
+  .page-meta { display: inline-flex; gap: 18px; margin-top: 14px; font-size: 11.5px;
+    color: var(--text-faint); flex-wrap: wrap; justify-content: center; }
+  .page-meta strong { color: var(--text-muted); font-weight: 500; }
+  .standard-highlight { display: inline-block; padding: 3px 10px; background: var(--success-bg);
+    color: var(--success); border-radius: 4px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--success-border); margin-top: 8px; }
+
+  .comparison-section { margin-bottom: 40px; }
+  .comparison-intro { text-align: center; margin-bottom: 24px; }
+  .comparison-intro h2 { font-size: 20px; font-weight: 500; margin: 0 0 6px; color: var(--accent); }
+  .comparison-intro p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  .compare-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 16px; }
+  .col { background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; }
+  .col-header { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .col-header.original-col { background: var(--accent-bg); border-bottom-color: var(--accent); }
+  .col-header.upstage { background: var(--upstage-bg); border-bottom-color: var(--upstage-purple); }
+  .col-header.corepin { background: var(--card-bg-alt); border-bottom-color: var(--border-strong); }
+  .col-title { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+  .col-title.original-col { color: var(--accent); }
+  .col-title.upstage { color: var(--upstage-purple); }
+  .col-title.corepin { color: var(--text-muted); }
+  .col-meta { font-size: 11.5px; color: var(--text-faint); line-height: 1.7; }
+  .col-meta .badge-mini { display: inline-block; padding: 2px 7px; background: var(--card-bg);
+    color: var(--text-muted); border-radius: 3px; font-size: 10px; margin-right: 6px;
+    border: 1px solid var(--border); }
+  .col-meta .badge-mode { background: var(--success-bg); color: var(--success);
+    border-color: var(--success-border); font-weight: 500; }
+  .col-status { display: inline-block; font-size: 10px; font-weight: 500;
+    padding: 2px 8px; border-radius: 3px; margin-top: 6px;
+    letter-spacing: 0.04em; text-transform: uppercase; }
+  .col-status.ok { background: var(--success-bg); color: var(--success);
+    border: 1px solid var(--success-border); }
+  .col-status.fail { background: var(--danger-bg); color: var(--danger);
+    border: 1px solid var(--danger-border); }
+  .col-body { padding: 20px 18px; }
+
+  .original-col-image { background: #fff; border-radius: 6px; padding: 8px;
+    border: 1px solid var(--border-strong); }
+  .original-col-image img { width: 100%; height: auto; display: block; border-radius: 3px; }
+
+  /* UPSTAGE */
+  .upstage-result { background: var(--card-bg-alt); border: 1.5px solid var(--success);
+    border-radius: 6px; padding: 16px; margin-bottom: 14px; }
+  .upstage-result-label { font-size: 11px; color: var(--success); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px; }
+  .upstage-result-label::before { content: ""; width: 6px; height: 6px;
+    background: var(--success); border-radius: 50%; }
+
+  .upstage-element-meta { background: var(--bg); padding: 10px 12px; border-radius: 4px;
+    border: 1px solid var(--success-border); margin-bottom: 12px; font-size: 10.5px;
+    font-family: monospace; color: var(--success); line-height: 1.7; }
+  .upstage-element-meta strong { color: var(--text); font-weight: 500; }
+
+  .chart-card { background: var(--bg); border: 1px solid var(--success);
+    border-radius: 4px; padding: 12px; margin-bottom: 12px; }
+  .chart-card-header { display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed var(--success); }
+  .chart-id { font-family: monospace; font-size: 10px; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 0.05em; }
+  .chart-type-tag { font-size: 10px; padding: 3px 10px; background: var(--accent-bg);
+    color: var(--accent); border-radius: 3px; border: 1px solid var(--accent);
+    font-weight: 600; text-transform: uppercase; }
+
+  .chart-data-table { width: 100%; border-collapse: collapse; font-size: 10.5px;
+    background: var(--card-bg); }
+  .chart-data-table th, .chart-data-table td {
+    border: 1px solid var(--success-border); padding: 5px 8px; text-align: center;
+    color: var(--text); }
+  .chart-data-table th { background: var(--success-bg); color: var(--success);
+    font-weight: 500; font-size: 10px; }
+  .chart-data-table td:first-child { background: rgba(86, 211, 100, 0.05);
+    color: var(--success); font-weight: 500; text-align: left; }
+
+  .chart-base64-note { margin-top: 8px; padding: 6px 10px; background: rgba(167, 139, 250, 0.08);
+    border: 1px dashed var(--accent); border-radius: 3px; font-size: 9.5px;
+    color: var(--accent); text-align: center; font-family: monospace; }
+
+  /* COREPIN */
+  .corepin-result { background: var(--card-bg-alt); border: 1.5px solid var(--danger);
+    border-radius: 6px; padding: 16px; }
+  .corepin-result-label { font-size: 11px; color: var(--danger); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px; }
+  .corepin-result-label::before { content: ""; width: 6px; height: 6px;
+    background: var(--danger); border-radius: 50%; }
+
+  .corepin-block-meta { background: var(--bg); padding: 10px 12px; border-radius: 4px;
+    border: 1px solid var(--danger-border); margin-bottom: 12px; font-size: 10.5px;
+    font-family: monospace; color: var(--danger); line-height: 1.7; }
+  .corepin-block-meta strong { color: var(--text); font-weight: 500; }
+
+  .corepin-paragraph { background: var(--bg); border: 1px solid var(--danger);
+    border-radius: 4px; padding: 16px; font-size: 11.5px; line-height: 1.85;
+    color: var(--text); max-height: 700px; overflow-y: auto;
+    border-left: 4px solid var(--danger); }
+  .corepin-paragraph::before { content: "type: paragraph · pageNumber: 1 (block 1/1)";
+    display: block; font-size: 10px; color: var(--danger);
+    font-family: monospace; margin-bottom: 10px; padding-bottom: 8px;
+    border-bottom: 1px dashed var(--danger); letter-spacing: 0.03em; }
+
+  .chart-data-fragment { background: var(--danger-bg); color: var(--danger);
+    padding: 2px 6px; border-radius: 3px; font-weight: 500;
+    border-bottom: 1.5px solid var(--danger); }
+  .ocr-error { background: var(--warning-bg); color: var(--warning);
+    padding: 1px 5px; border-radius: 3px; font-weight: 500;
+    border-bottom: 1.5px solid var(--warning); }
+  .ocr-error[data-correct]::after { content: " (→ " attr(data-correct) ")";
+    font-size: 9.5px; color: var(--text-faint); font-weight: 400;
+    background: var(--card-bg); padding: 1px 4px; border-radius: 2px; margin-left: 2px;
+    border: 1px solid var(--border); }
+
+  /* SUMMARY */
+  .summary { margin-top: 48px; padding: 28px 32px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 10px; }
+  .summary h2 { font-size: 16px; font-weight: 500; margin: 0 0 18px; color: var(--accent); }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .summary-table th, .summary-table td {
+    padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .summary-table th { color: var(--text-muted); font-weight: 500;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table .pos { color: var(--success); }
+  .summary-table .neg { color: var(--danger); }
+  .summary-table td:first-child { color: var(--text-muted); font-size: 11.5px; }
+
+  .critical-callout { margin-top: 24px; padding: 18px 22px; background: var(--accent-bg);
+    border: 1.5px solid var(--accent); border-radius: 8px; }
+  .critical-callout strong { color: var(--accent); display: block; font-size: 13px;
+    margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .critical-callout p { margin: 0; font-size: 12.5px; color: var(--text); line-height: 1.7; }
+
+  .legend { margin-top: 24px; padding: 14px 18px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+    color: var(--text-muted); line-height: 1.7; }
+  .legend strong { color: var(--text); font-weight: 500; }
+
+  footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);
+    text-align: center; font-size: 11px; color: var(--text-faint); }
+
+  @media (max-width: 1100px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .container { padding: 32px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="page-header">
+  <h1>차트 인식 실측 비교 — Original vs Upstage vs Corepin</h1>
+  <p class="page-subtitle">
+    파이차트 1개 + 막대차트 2개가 포함된 보고서 페이지<br>
+    차트를 구조화된 데이터로 추출하는가, 텍스트로 평탄화하는가
+  </p>
+  <div class="page-meta">
+    <span><strong>대상</strong> 생성형 AI 활용 현황 보고서 (한국은행, 2025.08.18)</span>
+    <span><strong>Upstage</strong> document-parse-260128 (Standard)</span>
+    <span><strong>Corepin</strong> doc-2026.05</span>
+  </div>
+  <div class="standard-highlight">⚡ Upstage는 Standard 모드로 차트 3개 모두 유형 분류 + 데이터 추출 완료</div>
+</header>
+
+<div class="comparison-section">
+  <div class="comparison-intro">
+    <h2>원본 PDF vs 두 제품의 파싱 결과</h2>
+    <p>차트가 데이터로 추출되어야 LLM에 투입해 분석·요약·시각화 재생산 가능</p>
+  </div>
+
+  <div class="compare-grid">
+
+    <!-- ORIGINAL -->
+    <div class="col">
+      <div class="col-header original-col">
+        <div class="col-title original-col">Original</div>
+        <div class="col-meta">
+          <span class="badge-mini">차트_코어핀.png</span>
+          <span class="badge-mini">파이 1 + 막대 2</span>
+          <br>
+          국내 AI 활용 현황 / 한국 vs 미국 / 인터넷 vs 생성형 AI 확산 곡선
+          <br>
+          <span class="col-status" style="background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent);">원본 PDF 페이지</span>
+        </div>
+      </div>
+      <div class="col-body">
+        <div class="original-col-image">
+          <img src="https://raw.githubusercontent.com/seungeun-hawa/upstage/89550c9051081b61ef9e0fffe2f656247441102c/%E1%84%8E%E1%85%A1%E1%84%90%E1%85%B3_%E1%84%8F%E1%85%A9%E1%84%8B%E1%85%A5%E1%84%91%E1%85%B5%E1%86%AB.png" alt="차트가 포함된 보고서 원본">
+        </div>
+      </div>
+    </div>
+
+    <!-- UPSTAGE -->
+    <div class="col">
+      <div class="col-header upstage">
+        <div class="col-title upstage">Upstage Document Parse</div>
+        <div class="col-meta">
+          <span class="badge-mini">document-parse-260128</span>
+          <span class="badge-mini badge-mode">Standard 모드</span>
+          <br>
+          Elements: 23 (chart 3, heading1 5, list 7, paragraph 4, footer 1, ...) | chart category: ✓ | base64: ✓
+          <br>
+          <span class="col-status ok">차트 3개 모두 유형 분류 + 데이터 매트릭스 추출</span>
+        </div>
+      </div>
+      <div class="col-body">
+        <div class="upstage-result">
+          <div class="upstage-result-label">차트 3개 — category=chart + Chart Type 자동 분류 + 데이터 테이블화</div>
+
+          <div class="upstage-element-meta">
+            elements[2]: { category: <strong>"chart"</strong>, chart_type: <strong>"pie"</strong>, base64: "..." }<br>
+            elements[6]: { category: <strong>"chart"</strong>, chart_type: <strong>"bar"</strong>, base64: "..." }<br>
+            elements[9]: { category: <strong>"chart"</strong>, chart_type: <strong>"bar"</strong>, base64: "..." }
+          </div>
+
+          <!-- Chart #2: Pie -->
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-id">elements[2] · id=2 · 국내 AI 활용 현황</span>
+              <span class="chart-type-tag">pie</span>
+            </div>
+            <table class="chart-data-table">
+              <thead>
+                <tr><th></th><th>22.2%</th><th>36.5%</th><th>41.3%</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>활용 비율</td><td>22.2%</td><td>36.5%</td><td>41.3%</td></tr>
+              </tbody>
+            </table>
+            <div class="chart-base64-note">📷 base64 이미지 포함 · bbox: (0.139, 0.224) ~ (0.278, 0.439)</div>
+          </div>
+
+          <!-- Chart #6: Bar (한국 vs 미국) -->
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-id">elements[6] · id=6 · 한국 vs 미국</span>
+              <span class="chart-type-tag">bar</span>
+            </div>
+            <table class="chart-data-table">
+              <thead>
+                <tr><th></th><th>전체</th><th>업무 내</th><th>업무 외</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>한국</td><td>63.5%</td><td>51.8%</td><td>60.0%</td></tr>
+                <tr><td>미국</td><td>39.6%</td><td>26.5%</td><td>33.7%</td></tr>
+              </tbody>
+            </table>
+            <div class="chart-base64-note">📷 base64 이미지 포함 · bbox: (0.397, 0.260) ~ (0.652, 0.547)</div>
+          </div>
+
+          <!-- Chart #9: Bar (인터넷 vs AI) -->
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span class="chart-id">elements[9] · id=9 · 인터넷 vs 생성형 AI 확산</span>
+              <span class="chart-type-tag">bar</span>
+            </div>
+            <table class="chart-data-table">
+              <thead>
+                <tr><th>경과(년)</th><th>0</th><th>5</th><th>10</th><th>15</th><th>20</th><th>25</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>인터넷</td><td>0%</td><td>20%</td><td>60%</td><td>80%</td><td>85%</td><td>90%</td></tr>
+                <tr><td>생성형 AI</td><td>0%</td><td>50%</td><td>70%</td><td>77%</td><td>82%</td><td>90%</td></tr>
+              </tbody>
+            </table>
+            <div class="chart-base64-note">📷 base64 이미지 포함 · bbox: (0.706, 0.273) ~ (0.959, 0.559)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COREPIN -->
+    <div class="col">
+      <div class="col-header corepin">
+        <div class="col-title corepin">Corepin Document Parse</div>
+        <div class="col-meta">
+          <span class="badge-mini">doc-2026.05</span>
+          <br>
+          Blocks: <strong style="color: var(--danger);">paragraph 1개</strong> | chart: <strong style="color: var(--danger);">0개</strong> | 차트 유형 인식: ✗
+          <br>
+          <span class="col-status fail">차트 데이터 텍스트에 평탄화</span>
+        </div>
+      </div>
+      <div class="col-body">
+        <div class="corepin-result">
+          <div class="corepin-result-label">페이지 전체를 paragraph 1개 — 차트 수치가 본문 텍스트에 흘려 들어감</div>
+
+          <div class="corepin-block-meta">
+            blocks: [<br>
+            &nbsp;&nbsp;{ type: <strong>"paragraph"</strong>, text: "...", pageNumber: 1 }<br>
+            ] · chart 카테고리 미존재, 어느 수치가 어느 차트의 것인지 추론 불가
+          </div>
+
+          <div class="corepin-paragraph">
+생성형 AI 활용 현황 ● 국내 AI 활용 현황 <span class="chart-data-fragment">22.2% 36.5% 63.5%</span> 총 활용률 <span class="chart-data-fragment">41.3%</span> ● 전체 근로자의 63.5%가 생성형 AI 경험 ● 정기적 사용: 22.2% ● 비정기적 사용: 41.3% ● 업무 목적 사용: 51.8% ● 업무 외 목적 사용: 60.1% &lt;그림 2&gt; 생성형 AI 활용률: 한국 vs 미국 (%) <span class="chart-data-fragment">전체 63.5 업무 내 39.6 51.8 업무 외 26.5 60.1 33.7 0 20 40 60 80 100</span> 한국 ■ 미국 ▶한국의 생성형 AI 활용률은 미국보다 약 2배 높은 수 준 • 업무 목적: 한국 51.8% vs 미국 26.5% • 업무 외: 한국 60.1% vs 미국 33.7% • 사용 시간: 한국 주당 5~7시간 vs 미국 0.5~2.2시 간 ▶인터넷 인터넷 <span class="chart-data-fragment">100 80 60 40 20 0 5 10 15 20 25 30</span> <span class="ocr-error" data-correct="상용화">생명화</span> 이후 경과 연수 생성형 AI는 인터넷보다 8배 빠른 확산 속도 • 상용화 3년 후 인터넷: 7.8% • 상용화 3년 이내 생성형 AI: 63.5% • 빠른 확산 배경: 이미 구축된 디지털 인프라와 생 성형 AI의 높은 범용성 주요 시사점 한국은 글로벌 선두 수준의 AI 활용률과 기술 수용성을 보유 AI 활용 강도(사용 시간)를 다루며 미국에 비 높은 수준으로 업무 통합 진행 중 인터넷보다 8배 빠른 확산은 AI 기술의 경제적 영향이 가속화될 가능성 시사 서동현 | 한국은행 조사국 | 2025-08-18
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="legend">
+  <strong style="color: var(--danger);">빨간 음영</strong> = 차트 데이터가 본문 텍스트에 흩어진 부분 — 어느 수치가 어느 차트·어느 축의 값인지 식별 불가능. 
+  <strong style="color: var(--warning);">노란 음영</strong> = OCR 오류 (괄호 안이 원본 정답, 예: "상용화" → "생명화"로 잘못 인식).
+</div>
+
+<div class="critical-callout">
+  <strong>📊 차트 인식의 영업 임팩트</strong>
+  <p>
+    <strong>차트는 LLM 자동화의 핵심 데이터 소스</strong>입니다. Upstage는 차트 유형(pie/bar)을 자동 분류하고 데이터 매트릭스를 <code>&lt;table&gt;</code>로 출력하므로, 그대로 Solar/GPT에 넣어 "한국 vs 미국 격차 요약", "확산 속도 비교 시각화 재생산" 같은 작업이 가능합니다. Corepin은 차트 수치가 paragraph 안에 평탄화되어 <strong>"63.5 39.6 51.8 26.5..."</strong> 같은 숫자 나열만 남기 때문에 어느 차트·어느 축의 값인지 알 수 없습니다. 데이터 분석·금융·리서치 도메인에서 결정적인 차이.
+  </p>
+</div>
+
+<div class="summary">
+  <h2>한눈에 정리</h2>
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th style="width: 240px;">평가축</th>
+        <th>Upstage Document Parse (Standard)</th>
+        <th>Corepin Document Parse</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Element 분리</td>
+        <td class="pos">23 elements (heading1, chart, list, paragraph, footer 등 카테고리별 분리)</td>
+        <td class="neg">paragraph 단 1개로 페이지 전체 통합</td>
+      </tr>
+      <tr>
+        <td>차트 카테고리</td>
+        <td class="pos">category="chart" 별도 분리 (chart 3개)</td>
+        <td class="neg">chart 카테고리 자체 미사용</td>
+      </tr>
+      <tr>
+        <td>차트 유형 분류</td>
+        <td class="pos">Chart Type 자동 분류: pie / bar 명시</td>
+        <td class="neg">파이/막대/선 구분 없음 — 모두 텍스트</td>
+      </tr>
+      <tr>
+        <td>차트 데이터 추출</td>
+        <td class="pos">데이터 매트릭스를 &lt;table&gt;로 변환 (한국 63.5/51.8/60.0, 미국 39.6/26.5/33.7 등 셀 단위 매핑)</td>
+        <td class="neg">"63.5 39.6 51.8 26.5..." 식 숫자 나열 — 어느 축 값인지 판별 불가</td>
+      </tr>
+      <tr>
+        <td>차트 이미지</td>
+        <td class="pos">base64 이미지 포함 (LLM 시각 분석 즉시 가능) + bbox 좌표</td>
+        <td class="neg">이미지 데이터 일체 없음</td>
+      </tr>
+      <tr>
+        <td>차트 위치 (bbox)</td>
+        <td class="pos">각 차트별 4-vertex polygon 좌표 제공 — UI 하이라이트·재배치 가능</td>
+        <td class="neg">없음</td>
+      </tr>
+      <tr>
+        <td>OCR 정확도</td>
+        <td class="pos">"상용화", "한국은행 조사국" 등 정확 인식</td>
+        <td class="neg">"상용화 → 생명화" 등 오인식 발견</td>
+      </tr>
+      <tr>
+        <td>LLM 자동화 활용 가능성</td>
+        <td class="pos">차트 데이터를 직접 분석·요약·재시각화 가능</td>
+        <td class="neg">차트 정보 완전 손실 — 자동화 파이프라인 불가</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  Upstage DP 팀 · TPM 작성 · 2026.05 · 비교 모델 document-parse-260128 (Standard) vs doc-2026.05 · 차트 보고서 실측
+</footer>
+
+</div>
+</body>
+</html>
