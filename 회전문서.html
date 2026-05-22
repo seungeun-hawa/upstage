@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회전된 처방전 DP 시각 비교 — Original vs Upstage vs Corepin</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card-bg: #161b22;
+    --card-bg-alt: #1c2128;
+    --border: #30363d;
+    --border-strong: #484f58;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-faint: #6e7681;
+    --accent: #a78bfa;
+    --accent-bg: rgba(167, 139, 250, 0.15);
+    --success: #56d364;
+    --success-bg: rgba(86, 211, 100, 0.12);
+    --success-border: rgba(86, 211, 100, 0.4);
+    --danger: #f85149;
+    --danger-bg: rgba(248, 81, 73, 0.12);
+    --danger-border: rgba(248, 81, 73, 0.4);
+    --warning: #d29922;
+    --warning-bg: rgba(210, 153, 34, 0.15);
+    --upstage-purple: #7c3aed;
+    --upstage-bg: rgba(124, 58, 237, 0.15);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif;
+    font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1900px; margin: 0 auto; padding: 48px 32px 80px; }
+
+  header.page-header { text-align: center; margin-bottom: 32px; }
+  h1 { font-size: 28px; font-weight: 600; margin: 0 0 8px;
+    color: var(--accent); letter-spacing: -0.01em; }
+  .page-subtitle { color: var(--text-muted); font-size: 13.5px; margin: 0; line-height: 1.7; }
+  .page-meta { display: inline-flex; gap: 18px; margin-top: 14px; font-size: 11.5px;
+    color: var(--text-faint); flex-wrap: wrap; justify-content: center; }
+  .page-meta strong { color: var(--text-muted); font-weight: 500; }
+  .standard-highlight { display: inline-block; padding: 3px 10px; background: var(--success-bg);
+    color: var(--success); border-radius: 4px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--success-border); margin-top: 8px; }
+
+  /* COMPARISON */
+  .comparison-section { margin-bottom: 40px; }
+  .comparison-intro { text-align: center; margin-bottom: 24px; }
+  .comparison-intro h2 { font-size: 20px; font-weight: 500; margin: 0 0 6px; color: var(--accent); }
+  .comparison-intro p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  .compare-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 16px; }
+  .col { background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; }
+  .col-header { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .col-header.original-col { background: var(--accent-bg); border-bottom-color: var(--accent); }
+  .col-header.upstage { background: var(--upstage-bg); border-bottom-color: var(--upstage-purple); }
+  .col-header.corepin { background: var(--card-bg-alt); border-bottom-color: var(--border-strong); }
+  .col-title { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+  .col-title.original-col { color: var(--accent); }
+  .col-title.upstage { color: var(--upstage-purple); }
+  .col-title.corepin { color: var(--text-muted); }
+  .col-meta { font-size: 11.5px; color: var(--text-faint); line-height: 1.7; }
+  .col-meta .badge-mini { display: inline-block; padding: 2px 7px; background: var(--card-bg);
+    color: var(--text-muted); border-radius: 3px; font-size: 10px; margin-right: 6px;
+    border: 1px solid var(--border); }
+  .col-meta .badge-mode { background: var(--success-bg); color: var(--success);
+    border-color: var(--success-border); font-weight: 500; }
+  .col-status { display: inline-block; font-size: 10px; font-weight: 500;
+    padding: 2px 8px; border-radius: 3px; margin-top: 6px;
+    letter-spacing: 0.04em; text-transform: uppercase; }
+  .col-status.ok { background: var(--success-bg); color: var(--success);
+    border: 1px solid var(--success-border); }
+  .col-status.fail { background: var(--danger-bg); color: var(--danger);
+    border: 1px solid var(--danger-border); }
+  .col-body { padding: 20px 18px; }
+
+  /* Original column image */
+  .original-col-image { background: #fff; border-radius: 6px; padding: 8px;
+    border: 1px solid var(--border-strong); }
+  .original-col-image img { width: 100%; height: auto; display: block; border-radius: 3px; }
+
+  /* UPSTAGE */
+  .upstage-result { background: var(--card-bg-alt); border: 1.5px solid var(--success);
+    border-radius: 6px; padding: 16px; margin-bottom: 14px; }
+  .upstage-result-label { font-size: 11px; color: var(--success); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px; }
+  .upstage-result-label::before { content: ""; width: 6px; height: 6px;
+    background: var(--success); border-radius: 50%; }
+
+  .upstage-element-meta { background: var(--bg); padding: 10px 12px; border-radius: 4px;
+    border: 1px solid var(--success-border); margin-bottom: 12px; font-size: 10.5px;
+    font-family: monospace; color: var(--success); line-height: 1.7; }
+  .upstage-element-meta strong { color: var(--text); font-weight: 500; }
+
+  /* Upstage rendered tables */
+  .upstage-table { width: 100%; border-collapse: collapse; font-size: 10.5px;
+    background: var(--bg); }
+  .upstage-table th, .upstage-table td {
+    border: 1px solid var(--success-border); padding: 6px 8px; vertical-align: middle;
+    color: var(--text); text-align: center; }
+  .upstage-table th { background: var(--success-bg); color: var(--success);
+    font-weight: 500; }
+  .upstage-table td.merged { background: rgba(86, 211, 100, 0.08); color: var(--success);
+    font-weight: 500; }
+
+  /* checkbox group */
+  .checkbox-group { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px;
+    background: var(--bg); border-radius: 4px; border: 1px solid var(--success-border); }
+  .check-item { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px;
+    border-radius: 3px; font-size: 10.5px; }
+  .check-item.checked { background: var(--success-bg); color: var(--success);
+    border: 1px solid var(--success); font-weight: 500; }
+  .check-item.unchecked { background: var(--card-bg); color: var(--text-muted);
+    border: 1px solid var(--border); }
+  .check-item .mark { font-size: 12px; }
+
+  /* drug table */
+  .drug-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 8px;
+    background: var(--bg); }
+  .drug-table th, .drug-table td {
+    border: 1px solid var(--success-border); padding: 5px 6px; color: var(--text); }
+  .drug-table th { background: var(--success-bg); color: var(--success); font-weight: 500;
+    font-size: 9.5px; text-align: center; }
+  .drug-table .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 9.5px; }
+  .drug-table .drug-name { font-weight: 500; }
+  .drug-table td.center { text-align: center; }
+  .drug-correct { color: var(--success); font-weight: 500; }
+
+  /* COREPIN */
+  .corepin-result { background: var(--card-bg-alt); border: 1.5px solid var(--danger);
+    border-radius: 6px; padding: 16px; margin-bottom: 14px; }
+  .corepin-result-label { font-size: 11px; color: var(--danger); font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px; }
+  .corepin-result-label::before { content: ""; width: 6px; height: 6px;
+    background: var(--danger); border-radius: 50%; }
+
+  .corepin-block-meta { background: var(--bg); padding: 10px 12px; border-radius: 4px;
+    border: 1px solid var(--danger-border); margin-bottom: 12px; font-size: 10.5px;
+    font-family: monospace; color: var(--danger); line-height: 1.7; }
+  .corepin-block-meta strong { color: var(--text); font-weight: 500; }
+
+  .corepin-paragraph { background: var(--bg); border: 1px solid var(--danger);
+    border-radius: 4px; padding: 16px; font-size: 11.5px; line-height: 1.85;
+    color: var(--text); max-height: 700px; overflow-y: auto;
+    border-left: 4px solid var(--danger); }
+  .corepin-paragraph::before { content: "type: paragraph · pageNumber: 1 (block 1/1)";
+    display: block; font-size: 10px; color: var(--danger);
+    font-family: monospace; margin-bottom: 10px; padding-bottom: 8px;
+    border-bottom: 1px dashed var(--danger); letter-spacing: 0.03em; }
+
+  .ocr-error { background: var(--warning-bg); color: var(--warning);
+    padding: 1px 5px; border-radius: 3px; font-weight: 500;
+    border-bottom: 1.5px solid var(--warning); }
+  .ocr-error[data-correct]::after { content: " (→ " attr(data-correct) ")";
+    font-size: 9.5px; color: var(--text-faint); font-weight: 400;
+    background: var(--card-bg); padding: 1px 4px; border-radius: 2px; margin-left: 2px;
+    border: 1px solid var(--border); }
+
+  .critical-error { background: var(--danger-bg); color: var(--danger);
+    padding: 1px 5px; border-radius: 3px; font-weight: 600;
+    border-bottom: 2px solid var(--danger); }
+  .critical-error[data-correct]::after { content: " (→ " attr(data-correct) ")";
+    font-size: 9.5px; color: var(--text-faint); font-weight: 400;
+    background: var(--card-bg); padding: 1px 4px; border-radius: 2px; margin-left: 2px;
+    border: 1px solid var(--border); }
+
+  /* SUMMARY */
+  .summary { margin-top: 48px; padding: 28px 32px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 10px; }
+  .summary h2 { font-size: 16px; font-weight: 500; margin: 0 0 18px; color: var(--accent); }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .summary-table th, .summary-table td {
+    padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .summary-table th { color: var(--text-muted); font-weight: 500;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table .pos { color: var(--success); }
+  .summary-table .neg { color: var(--danger); }
+  .summary-table td:first-child { color: var(--text-muted); font-size: 11.5px; }
+
+  .critical-callout { margin-top: 24px; padding: 18px 22px; background: var(--danger-bg);
+    border: 1.5px solid var(--danger); border-radius: 8px; }
+  .critical-callout strong { color: var(--danger); display: block; font-size: 13px;
+    margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .critical-callout p { margin: 0; font-size: 12.5px; color: var(--text); line-height: 1.7; }
+
+  .legend { margin-top: 24px; padding: 14px 18px; background: var(--card-bg);
+    border: 1px solid var(--border); border-radius: 8px; font-size: 12px;
+    color: var(--text-muted); line-height: 1.7; }
+  .legend strong { color: var(--text); font-weight: 500; }
+
+  footer { margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border);
+    text-align: center; font-size: 11px; color: var(--text-faint); }
+
+  @media (max-width: 1100px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .container { padding: 32px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="page-header">
+  <h1>회전된 한국 처방전 인식 실측 비교</h1>
+  <p class="page-subtitle">
+    180° 회전된 의료 처방전을 두 제품이 어떻게 다르게 이해하는가<br>
+    회전 자동 보정 + 표 구조 + 체크박스 + 의약품명 정확도 4가지 차원
+  </p>
+  <div class="page-meta">
+    <span><strong>대상</strong> 한국 의료보험 처방전 (강민지 환자, 기쁨병원, 2019.10.15)</span>
+    <span><strong>Upstage</strong> document-parse-260128 (Standard)</span>
+    <span><strong>Corepin</strong> doc-2026.05</span>
+  </div>
+  <div class="standard-highlight">⚡ Upstage는 Standard 모드로 회전 자동 보정 + 의약품명 3/3 정확</div>
+</header>
+
+<div class="comparison-section">
+  <div class="comparison-intro">
+    <h2>원본 PDF vs 두 제품의 파싱 결과</h2>
+    <p>원본은 180° 뒤집힌 상태 — 회전 보정 작동 여부가 의약품명 인식 정확도로 직결</p>
+  </div>
+
+  <div class="compare-grid">
+
+    <!-- ORIGINAL -->
+    <div class="col">
+      <div class="col-header original-col">
+        <div class="col-title original-col">Original</div>
+        <div class="col-meta">
+          <span class="badge-mini">회전된 처방전.png</span>
+          <span class="badge-mini">EXIF 180°</span>
+          <br>
+          강민지 환자 / 기쁨병원 / 처방의 이지현 / 2019.10.15 / 의약품 3종
+          <br>
+          <span class="col-status" style="background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent);">원본 PDF · 180° 뒤집힘</span>
+        </div>
+      </div>
+      <div class="col-body">
+        <div class="original-col-image">
+          <img src="https://raw.githubusercontent.com/seungeun-hawa/upstage/1deab20d0371ed67007902e1395f8bdd67a2de05/%E1%84%92%E1%85%AC%E1%84%8C%E1%85%A5%E1%86%AB%E1%84%83%E1%85%AC%E1%86%AB%20%E1%84%8E%E1%85%A5%E1%84%87%E1%85%A1%E1%86%BC%E1%84%8C%E1%85%A5%E1%86%AB.png" alt="회전된 한국 처방전 원본">
+        </div>
+      </div>
+    </div>
+
+    <!-- UPSTAGE -->
+    <div class="col">
+      <div class="col-header upstage">
+        <div class="col-title upstage">Upstage Document Parse</div>
+        <div class="col-meta">
+          <span class="badge-mini">document-parse-260128</span>
+          <span class="badge-mini badge-mode">Standard 모드</span>
+          <br>
+          Elements: 3 (header + table 2개) | 회전 보정: ✓ | 체크박스 ☑/□ 구분: ✓
+          <br>
+          <span class="col-status ok">정방향 의미 단위 추출 + 의약품 3/3 정확</span>
+        </div>
+      </div>
+      <div class="col-body">
+
+        <!-- 회전 보정 + 환자 정보 -->
+        <div class="upstage-result">
+          <div class="upstage-result-label">① 회전 자동 보정 + 환자 정보 표</div>
+          <div class="upstage-element-meta">
+            elements: [<br>
+            &nbsp;&nbsp;{ category: <strong>"header"</strong>, html: "환자보관용 / 처방전 / 발류번호: 18000188" },<br>
+            &nbsp;&nbsp;{ category: <strong>"table"</strong>, html: "&lt;table&gt;환자 정보 + 의료기관&lt;/table&gt;" },<br>
+            &nbsp;&nbsp;{ category: <strong>"table"</strong>, html: "&lt;table&gt;처방의약품&lt;/table&gt;" }<br>
+            ]
+          </div>
+          <table class="upstage-table">
+            <tbody>
+              <tr><td class="merged">환자 성명</td><td>강민지</td><td class="merged">처방의 성명</td><td>이지현</td></tr>
+              <tr><td class="merged">주민등록번호</td><td>920820-2******</td><td class="merged">의사 면허번호</td><td>89300</td></tr>
+              <tr><td class="merged">전화번호</td><td>02)570-1234</td><td class="merged">요양기관기호</td><td>11203251</td></tr>
+              <tr><td class="merged">교부일자</td><td colspan="3">2019년 10월 15일</td></tr>
+              <tr><td class="merged">질병분류기호</td><td colspan="3">E 0 4 1</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 체크박스 -->
+        <div class="upstage-result">
+          <div class="upstage-result-label">② 체크박스 상태 ☑/□ 구분 인식</div>
+          <div class="checkbox-group">
+            <div class="check-item checked"><span class="mark">☑</span>의료보험</div>
+            <div class="check-item unchecked"><span class="mark">□</span>의료보호</div>
+            <div class="check-item unchecked"><span class="mark">□</span>산재보험</div>
+            <div class="check-item unchecked"><span class="mark">□</span>자동차보험</div>
+            <div class="check-item unchecked"><span class="mark">□</span>기타</div>
+          </div>
+        </div>
+
+        <!-- 의약품 표 -->
+        <div class="upstage-result">
+          <div class="upstage-result-label">③ 의약품명 인식 — 3/3 정확</div>
+          <table class="drug-table">
+            <thead>
+              <tr>
+                <th>코드</th>
+                <th>의약품명</th>
+                <th>1회<br>투여량</th>
+                <th>1일<br>투여횟수</th>
+                <th>용법</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="code">645400120</td>
+                <td class="drug-name drug-correct">도란사민 캅셀 250MG (제일) ✓</td>
+                <td class="center">2.00</td>
+                <td class="center">3</td>
+                <td>하루3번 식후30분에</td>
+              </tr>
+              <tr>
+                <td class="code">653400910</td>
+                <td class="drug-name drug-correct">케토라신정 10mg (동국) ✓</td>
+                <td class="center">1.00</td>
+                <td class="center">3</td>
+                <td>하루3번 식후30분에</td>
+              </tr>
+              <tr>
+                <td class="code">642502290</td>
+                <td class="drug-name drug-correct">스티렌정 (동아) ✓</td>
+                <td class="center">1.00</td>
+                <td class="center">3</td>
+                <td>하루3번 식후30분에</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- COREPIN -->
+    <div class="col">
+      <div class="col-header corepin">
+        <div class="col-title corepin">Corepin Document Parse</div>
+        <div class="col-meta">
+          <span class="badge-mini">doc-2026.05</span>
+          <br>
+          Blocks: <strong style="color: var(--danger);">paragraph 1개</strong> | table: <strong style="color: var(--danger);">0개</strong> | 체크박스: ✗
+          <br>
+          <span class="col-status fail">의약품 3/3 오인식 — 의료 안전 위협</span>
+        </div>
+      </div>
+      <div class="col-body">
+        <div class="corepin-result">
+          <div class="corepin-result-label">실제 JSON · 회전 보정 없이 paragraph 1개로 평탄화</div>
+
+          <div class="corepin-block-meta">
+            blocks: [<br>
+            &nbsp;&nbsp;{ type: <strong>"paragraph"</strong>, text: "...", pageNumber: 1 }<br>
+            ] · 표 0개, 체크박스 미인식, 의약품 매트릭스 평탄화
+          </div>
+
+          <div class="corepin-paragraph">
+환자보관용 000000000000(?) 8-0856964098, 강민지 처방전 발류번호: 18000188 V의료보험 □의료보험 □산재보험 □자동차보험 □기타 요양기관기호: 11203251 교부일자 2019년 10월 15일 명정 기댓병원 교부번호 제 00180 호 전화번호 02)570-1234 환자 성명 강민지 팅스번호 02)570-1233 주민등록번호 920820-2* E-mail 질병분류호 E 0 4 1 처방의 성명 이지현 <span class="ocr-error" data-correct="반하종법(?)">반하종법</span> 의사 89300 ※ 환자의 요구가 있는 때에는 질병분류기호를 기재하지 아니합니다. 처방의약품의 명정 1회 투여량 1일 투여량수 투약입수 용법 645400120 <span class="critical-error" data-correct="도란사민 캅셀 250MG">도란사민 합썰 250MG</span> (제일) 2.00 3 3 하루3번 식후30분에 653400910 <span class="critical-error" data-correct="케토라신정 10mg">케토라신장 10mg</span> (동국) 1.00 3 3 하루3번 식후30분에 642502290 <span class="critical-error" data-correct="스티렌정">스타헌증</span> (동아) 1.00 3 3 하루3번 식후30분에 사용기간 교부입부터( 7 )일간 ※ 사용기간내에 알국에 제출하여야 합니다. 조제 내용 조제기관명
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="legend">
+  <strong style="color: var(--warning);">노란 음영</strong> = OCR 인식 오류 · <strong style="color: var(--danger);">빨간 음영</strong> = <strong style="color: var(--danger);">의약품명 오인식 (의료 안전 직결)</strong>.
+  화살표(→) 우측이 원본 PDF의 정답. Corepin은 의약품 3종 모두 오인식 — 특히 "스티렌정"을 "스타헌증"이라는 존재하지 않는 약품명으로 출력.
+</div>
+
+<div class="critical-callout">
+  <strong>🚨 의료 도메인 결정적 결함</strong>
+  <p>
+    스티렌정(Stillen)은 실제 <strong>동아ST의 위염 치료제</strong>입니다. Corepin의 "스타헌증"은 한국 의약품 데이터베이스에 존재하지 않는 명칭입니다. 처방전 자동 처리 시스템에서 약품명 오인식은 환자에게 잘못된 약이 조제되거나 청구 거절로 이어질 수 있는 <strong>환자 안전과 청구 정합성에 직결되는 결함</strong>입니다. 단순히 "정확도가 조금 낮다"가 아니라 의료 도메인에서 사용 가능 여부 자체가 갈리는 격차.
+  </p>
+</div>
+
+<div class="summary">
+  <h2>한눈에 정리</h2>
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th style="width: 240px;">평가축</th>
+        <th>Upstage Document Parse (Standard)</th>
+        <th>Corepin Document Parse</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>회전 자동 보정 (180°)</td>
+        <td class="pos">자동 감지 + 보정 → 텍스트 정방향 의미 단위로 추출</td>
+        <td class="neg">회전 보정 없음 → 단어 단위 OCR 오류 다수</td>
+      </tr>
+      <tr>
+        <td>Element 구조</td>
+        <td class="pos">3 elements (header + table 2개) — 환자정보·의약품 표 분리 인식</td>
+        <td class="neg">paragraph 단 1개로 페이지 전체 통합</td>
+      </tr>
+      <tr>
+        <td>표 구조 인식 (rowspan/colspan)</td>
+        <td class="pos">HTML table — 의료기관 rowspan="4", 환자/질병분류 rowspan="2" 완벽 처리</td>
+        <td class="neg">table 카테고리 0개 — 모든 셀 데이터가 paragraph 텍스트에 흘려 들어감</td>
+      </tr>
+      <tr>
+        <td>체크박스 양식 (☑/□)</td>
+        <td class="pos">☑ 의료보험 / □ 의료보호 / □ 산재보험 등 체크 상태 구분 인식</td>
+        <td class="neg">체크박스 정보 일체 누락 — 어느 보험 유형인지 알 수 없음</td>
+      </tr>
+      <tr>
+        <td>의약품명 정확도 (3종)</td>
+        <td class="pos">3/3 정확 (도란사민 캅셀, 케토라신정, 스티렌정)</td>
+        <td class="neg">3/3 모두 오인식 — 도란사민 합썰, 케토라신장, <strong>스타헌증(존재하지 않는 약품명)</strong></td>
+      </tr>
+      <tr>
+        <td>환자 정보</td>
+        <td class="pos">강민지 / 920820-2****** 정확 + 표 위치 명시</td>
+        <td class="neg">텍스트만 인식, 어느 셀에 속하는지 알 수 없음</td>
+      </tr>
+      <tr>
+        <td>의료 도메인 사용 가능성</td>
+        <td class="pos">처방전 자동화·청구 시스템·전자처방 연동 가능</td>
+        <td class="neg">약품명 오인식으로 환자 안전·청구 정합성 위협 — 사용 불가</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  Upstage DP 팀 · TPM 작성 · 2026.05 · 비교 모델 document-parse-260128 (Standard) vs doc-2026.05 · 회전된 한국 처방전 실측
+</footer>
+
+</div>
+</body>
+</html>
