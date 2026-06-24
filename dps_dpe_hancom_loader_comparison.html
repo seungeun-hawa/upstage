@@ -26,6 +26,20 @@ header.topbar{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px
 
 .panel{display:none}
 .panel.active{display:block}
+.features-panel .ftable-wrap{padding:14px 22px 28px;max-width:1280px;margin:0 auto}
+.features-panel .ftable-h{font-size:15px;margin:18px 0 8px;color:var(--text)}
+.features-panel .ftable-h:first-child{margin-top:4px}
+.features-panel .ftable{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px;font-size:13px}
+.features-panel .ftable thead{background:#0f172a;color:#fff}
+.features-panel .ftable th{padding:10px 13px;text-align:left;font-weight:600;font-size:12.5px}
+.features-panel .ftable td{padding:10px 13px;border-top:1px solid var(--border);vertical-align:top;line-height:1.6}
+.features-panel .ftable tbody tr:hover{background:#f8fafc}
+.features-panel .ftable td:first-child{font-weight:500;width:22%;color:#334155}
+.features-panel .ftable code{background:#f1f5f9;padding:1px 6px;border-radius:3px;font-size:0.9em;font-family:ui-monospace,Menlo,Consolas,monospace}
+.features-panel .ftable .muted{color:var(--muted);font-size:12px}
+.features-panel .legend-feat{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.features-panel .legend-feat b{color:var(--text);font-weight:600;margin-right:4px}
+.features-panel .assess a{color:#0f172a}
 
 .assess{margin:18px 22px;padding:14px 18px;background:#fff;border:1px solid var(--border);border-radius:8px}
 .assess h2{margin:0 0 6px;font-size:16px}
@@ -98,9 +112,56 @@ header.topbar{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px
       <span class="hancom">Hancom = sdk.hancom.com</span>
     </div>
   </div>
-  <div class="tabs"><button class="tab" data-tab="0">1. 차트·통계표 (2단 PDF)</button><button class="tab" data-tab="1">2. 줄 없는 표 (연속 2개)</button><button class="tab" data-tab="2">3. 회전 + 처방전 양식</button><button class="tab" data-tab="3">4. 중첩 표 (표 안의 표)</button><button class="tab" data-tab="4">5. 영문 다단 (Reading Order)</button><button class="tab" data-tab="5">6. HWPX 네이티브 지원</button></div>
+  <div class="tabs"><button class="tab" data-view="features">📋 기능 비교</button><button class="tab" data-view="case" data-tab="0">1. 차트·통계표 (2단 PDF)</button><button class="tab" data-view="case" data-tab="1">2. 줄 없는 표 (연속 2개)</button><button class="tab" data-view="case" data-tab="2">3. 회전 + 처방전 양식</button><button class="tab" data-view="case" data-tab="3">4. 중첩 표 (표 안의 표)</button><button class="tab" data-view="case" data-tab="4">5. 영문 다단 (Reading Order)</button><button class="tab" data-view="case" data-tab="5">6. HWPX 네이티브 지원</button></div>
 </header>
 
+
+<section class="panel features-panel" data-view="features" id="panel-features">
+  <div class="assess">
+    <h2>📋 Document Parse · 한컴 데이터 로더 기능 비교</h2>
+    <p class="summary">한컴 데이터 로더 컬럼의 ✅는 공식 서비스 페이지(<a href="https://sdk.hancom.com/services/1" target="_blank">sdk.hancom.com/services/1</a>) 기준. 6개 케이스 실측에서 잘 안 된 항목은 <b>△</b>로 표시.</p>
+    <div class="legend-feat">
+      <span><b>✅</b> 지원</span>
+      <span><b>△</b> 공식 ✅ / 실측 불완전</span>
+      <span><b>❌</b> 미지원</span>
+      <span><b>–</b> 명시 없음 / 미확인</span>
+    </div>
+  </div>
+
+  <div class="ftable-wrap">
+    <h3 class="ftable-h">1. 지원 입력 형식</h3>
+    <table class="ftable">
+      <thead><tr><th>항목</th><th>DP (Document Parse)</th><th>데이터 로더 (한컴)</th></tr></thead>
+      <tbody>
+        <tr><td>지원 파일 포맷</td><td>PDF, 이미지(JPEG/PNG/TIFF), MS Office(DOCX/PPTX/XLSX), HWP/HWPX</td><td>HWP, HWPX, PDF + 이미지(PNG, JPG, JPEG, BMP)<br><span class="muted">※ MS Office 미지원, TIFF 미명시</span></td></tr>
+        <tr><td>지원 언어</td><td>한국어, 영어, 일본어, 중국어(간체)</td><td>한국어 (한글 문서 변환 특화)</td></tr>
+        <tr><td>최대 페이지 / 용량</td><td>동기 API 100p / 비동기 API 1,000p</td><td>100MB · 1,000p 이하 권장</td></tr>
+        <tr><td>호출 방식</td><td>동기 / 비동기</td><td>비동기 전용 (Webhook 또는 polling)</td></tr>
+        <tr><td>출력 포맷</td><td>JSON (<code>content.{html, markdown, text}</code>)</td><td>JSON · CSV · HTML (이미지·차트·표 별도 저장 가능)</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="ftable-h">2. 지원 기능</h3>
+    <table class="ftable">
+      <thead><tr><th>기능</th><th>DPS</th><th>DPE</th><th>데이터 로더 (한컴)</th></tr></thead>
+      <tbody>
+        <tr><td>HWP/HWPX 네이티브 처리</td><td>✅ (HWPX 실측 8.4s / 15 elem)</td><td>✅ (HWPX 실측 10.5s / 15 elem)</td><td>✅ (HWP/HWPX 응답엔 bbox 없음)</td></tr>
+        <tr><td>차트 내용 설명</td><td>❌</td><td>✅ DPE 전용</td><td>△ (Figure 영역만 분리, raw text dump)</td></tr>
+        <tr><td>이미지 내용 설명</td><td>❌</td><td>✅ DPE 전용</td><td>–</td></tr>
+        <tr><td>복잡한 표 (병합·중첩·선 없음)</td><td>기본 (실측 ✅ 중첩 <code>&lt;table&gt;</code> 보존)</td><td>고정밀</td><td>△ (중첩 평탄화 + <code>AL2년→OL2년</code> 등 OCR 오류)</td></tr>
+        <tr><td>차트 데이터 추출</td><td>기본</td><td>고정밀 (실측 ✅ 시리즈명·값 매트릭스)</td><td>△ (값 매핑 불가, 텍스트 덤프)</td></tr>
+        <tr><td>다중 페이지 걸친 표 자동 병합</td><td>기본</td><td>고정밀</td><td>✅ (공식 명시 X, 실측에서 줄없는 표 2개 → 1개로 병합)</td></tr>
+        <tr><td>체크박스 인식</td><td>기본</td><td>고정밀 (실측 ✅ <code>&lt;input type=&quot;checkbox&quot;&gt;</code> 마크업)</td><td>– (공식 명시 X)</td></tr>
+        <tr><td>기본 OCR (한·영·일·중 간체)</td><td>✅</td><td>✅</td><td>△ (한국어 OK, 영문 단어 공백 누락 다수: <code>lacksalibrary</code>, <code>theirpotential</code>, <code>ofprefix</code>)</td></tr>
+        <tr><td>좌표 정보 반환 (bbox)</td><td>✅</td><td>✅</td><td>△ (PDF ✅ / HWP·HWPX ❌ — 응답 스키마에 좌표 없음)</td></tr>
+        <tr><td>Reading Order 인식</td><td>✅ (실측 ✅ 다단 영문 정확)</td><td>✅ (실측 ✅)</td><td>△ (영문 다단 단어 분리 약함, HWP는 카테고리 <code>bodypara/subtitle/none</code>로 단순)</td></tr>
+        <tr><td>단순 표 인식</td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td>표 내 이미지/차트 인식</td><td>✅</td><td>✅</td><td>–</td></tr>
+        <tr><td>머리말·꼬리말·각주·미주·페이지 번호 인식</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
 
 <section class="panel" id="panel-0" data-panel="0">
   <div class="assess">
@@ -2708,18 +2769,35 @@ FBIL
 <script>
 (function(){
   const tabs = document.querySelectorAll('.tab');
-  const panels = document.querySelectorAll('.panel');
-  function activate(idx){
-    tabs.forEach((t,i) => t.classList.toggle('active', i===idx));
-    panels.forEach((p,i) => p.classList.toggle('active', i===idx));
+  const casePanels = document.querySelectorAll('.panel[data-panel]');
+  const featuresPanel = document.querySelector('.features-panel');
+
+  function activateFeatures(){
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.view === 'features'));
+    casePanels.forEach(p => p.classList.remove('active'));
+    if(featuresPanel) featuresPanel.classList.add('active');
+    history.replaceState(null, '', '#features');
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+  function activateCase(idx){
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.view === 'case' && parseInt(t.dataset.tab) === idx));
+    if(featuresPanel) featuresPanel.classList.remove('active');
+    casePanels.forEach((p,i) => p.classList.toggle('active', i===idx));
     history.replaceState(null, '', '#case-'+(idx+1));
     window.scrollTo({top:0, behavior:'instant'});
   }
-  tabs.forEach((t,i) => t.addEventListener('click', () => activate(i)));
+
+  tabs.forEach(t => t.addEventListener('click', () => {
+    if(t.dataset.view === 'features') activateFeatures();
+    else activateCase(parseInt(t.dataset.tab));
+  }));
 
   // URL hash로 진입
-  const m = location.hash.match(/^#case-(\d+)$/);
-  activate(m ? Math.max(0, Math.min(panels.length-1, parseInt(m[1])-1)) : 0);
+  const hash = location.hash || '';
+  const m = hash.match(/^#case-(\d+)$/);
+  if(hash === '#features') activateFeatures();
+  else if(m) activateCase(Math.max(0, Math.min(casePanels.length-1, parseInt(m[1])-1)));
+  else activateFeatures();
 
   // 하이라이트 (각 패널의 wrap 단위로)
   let activeEl = null;
