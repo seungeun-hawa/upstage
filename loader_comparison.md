@@ -1,62 +1,40 @@
-# DPS · DPE · Hancom 데이터로더 비교
+# Document Parse · 한컴 데이터 로더 기능 비교
 
-3종 데이터로더의 동일 입력 6개 샘플 실측 결과 + 케이스별 추천.
+> 한컴 데이터 로더 컬럼은 공식 서비스 페이지([sdk.hancom.com/services/1](https://sdk.hancom.com/services/1))에 명시된 사양 기준.
 
-- **DPS** : Upstage Document Parse Standard (`mode=standard`)
-- **DPE** : Upstage Document Parse Enhanced (`mode=enhanced`, VLM 기반)
-- **Hancom** : 한컴 데이터로더 (`api.sdk.hancom.com`, 비동기 polling)
+## 1. 지원 입력 형식
 
-상세 비교 페이지 (요소별 시각화): https://seungeun-hawa.github.io/upstage/dps_dpe_hancom_loader_comparison.html
+| 항목 | DP (Document Parse) | 데이터 로더 (한컴) |
+|---|---|---|
+| 지원 파일 포맷 | PDF, 이미지(JPEG/PNG/TIFF), MS Office(DOCX/PPTX/XLSX), HWP/HWPX | HWP, HWPX, PDF + 이미지(PNG, JPG, JPEG, BMP) ※ MS Office 미지원, TIFF 미명시 |
+| 지원 언어 | 한국어, 영어, 일본어, 중국어(간체) | 한국어 (한글 문서 변환 특화) |
+| 최대 페이지 / 용량 | 동기 API 100p / 비동기 API 1,000p | 100MB · 1,000p 이하 권장 |
+| 호출 방식 | 동기 / 비동기 | 비동기 전용 (Webhook 또는 polling) |
+| 출력 포맷 | JSON (`content.{html, markdown, text}`) | JSON · CSV · HTML (이미지·차트·표 별도 저장 가능) |
+| 결과 보관 | – | 7일 후 자동 삭제 |
+| DRM 문서 | – | 미지원 |
+| 가격 | (Upstage 단가) | 페이지당 10원 (실패 시 환불) |
 
----
+## 2. 지원 기능
 
-## 1. 실측 성능
-
-| # | 샘플 | 입력 | DPS (ms / elem) | DPE (ms / elem) | Hancom (ms / elem) |
-|---|---|---|---|---|---|
-| 1 | 차트·통계표 (2단 PDF) | PDF | 6,491 / 20 | 21,624 / 20 | 22,958 / 17 |
-| 2 | 줄 없는 표 (연속 2개) | PDF | 8,432 / 6 | 6,433 / 6 | 60,125 / 6 |
-| 3 | 회전 + 처방전 양식 | PNG (한컴은 PDF wrap) | 7,508 / 3 | 51,903 / 3 | 35,112 / 10 |
-| 4 | 중첩 표 (표 안의 표) | PNG (한컴은 PDF wrap) | 15,500 / 3 | 14,784 / 3 | 60,162 / 3 |
-| 5 | 영문 다단 (Reading Order) | PNG (한컴은 PDF wrap) | 3,382 / 20 | 4,497 / 20 | 60,038 / 20 |
-| 6 | HWPX 네이티브 지원 | HWPX | 8,415 / 15 | 10,466 / 15 | 16,389 / body 155 (텍스트 138) |
-
-> **속도**: DPS가 평균 가장 빠름(3–15초). DPE는 VLM 추론으로 케이스별 편차 큼(회전 양식 52초). Hancom은 비동기 큐 대기 포함이라 30초~1분이 기본.
->
-> **응답 스키마**: PDF/이미지/HWPX 입력에서는 3종 모두 `elements[]` 구조 + bbox. **단 Hancom의 HWPX는 `body[].contents.text` + `posInfo.docPageNum`으로 완전히 다른 스키마이고 bbox가 없음.**
-
----
-
-## 2. 케이스별 추천
-
-| # | 케이스 | 추천 | 이유 |
+| 기능 | DPS | DPE | 데이터 로더 (한컴) |
 |---|---|---|---|
-| 1 | 차트·통계표 (2단 PDF) | **DPE** (차트) / **Hancom** (본문) | DPE는 차트 시리즈명·값까지 매트릭스화. Hancom은 줄바꿈된 문장을 한 element에 묶어서 RAG 청킹에 유리. DPS/DPE는 본문이 단편으로 쪼개지고 "증가함"을 `heading1`로 오분류. |
-| 2 | 줄 없는 표 (연속 2개) | **DPE** | DPS와 같은 셀 구조 + `<th scope="col/colgroup">` 시맨틱. 연속 표 자동 병합 우선이면 Hancom. |
-| 3 | 회전 + 처방전 양식 | **DPE** | enhanced VLM이 표 텍스트 28k자 / HTML 80k자로 DPS의 14배 정밀. 처방전 본문·체크박스까지 마크업. |
-| 4 | 중첩 표 (표 안의 표) | **DPS** | 중첩 `<table>` 구조 그대로 보존. Hancom은 평탄화돼서 거대 병합 + 'AL2년→OL2년' 같은 OCR 오류. |
-| 5 | 영문 다단 (Reading Order) | **DPS** | reading order + 영문 단어 분리 정확. Hancom은 'lacksalibrary', 'theirpotential' 등 공백 누락 심각. |
-| 6 | HWPX 네이티브 지원 | **DPS/DPE** | HWPX 직접 처리 확인. PDF와 동일 스키마 + bbox + 카테고리 세분화. Hancom은 body 155개로 단락 세밀하지만 bbox 없음. |
+| HWP/HWPX 네이티브 처리 | ❌ (PDF 변환 필요) | ❌ (PDF 변환 필요) | ✅ **(한컴 차별점)** |
+| 차트 내용 설명 | ❌ | ✅ DPE 전용 | ✅ |
+| 이미지 내용 설명 | ❌ | ✅ DPE 전용 | ✅ |
+| 복잡한 표 (병합·중첩·선 없음) | 기본 | 고정밀 | ✅ |
+| 차트 데이터 추출 | 기본 | 고정밀 | ✅ |
+| 다중 페이지 걸친 표 자동 병합 | 기본 | 고정밀 | – (공식 명시 X) |
+| 체크박스 인식 | 기본 | 고정밀 | – (공식 명시 X) |
+| 기본 OCR (한·영·일·중 간체) | ✅ | ✅ | ✅ (한국어 기준) |
+| 좌표 정보 반환 (bbox) | ✅ | ✅ | ✅ (PDF) · ❌ (HWP/HWPX) |
+| Reading Order 인식 | ✅ | ✅ | ✅ (단 형식 문서 구조 고려) |
+| 단순 표 인식 | ✅ | ✅ | ✅ |
+| 수식 인식 (독립 블록, LaTeX, 복잡한 수식 안됨) | ✅ (둘 다 잘 안 됨) | ✅ (둘 다 잘 안 됨) | ✅ |
+| 복잡한 수식 | – | – | – |
+| 표 내 이미지/차트 인식 | ✅ | ✅ | ✅ |
+| 머리말·꼬리말·각주·미주·페이지 번호 인식 | ✅ | ✅ | ✅ |
+| 글꼴 정보 추출 (폰트/크기/볼드/정렬) | ❌ | ❌ | ✅ |
+| 후보정 스튜디오·라벨링 툴 | ❌ | ❌ | ✅ |
 
----
-
-## 3. 요약 결론
-
-- **일반 PDF / 빠른 처리** → **DPS**. 3–8초로 안정적, bbox·카테고리 세분화 양호.
-- **차트·복잡 표·복잡 양식이 핵심** → **DPE**. VLM 추론으로 정밀도 최상, 비용·지연(최대 52초) 감수.
-- **HWP/HWPX 네이티브 + RAG용 단락 무결성** → **Hancom** (단, HWPX 응답에 bbox 없음 → 좌표 기반 시각화/하이라이트 불가).
-- **영문·이미지 단독·중첩 구조** → DPS/DPE가 명확히 우위.
-
----
-
-## 4. 한컴 데이터로더 특이사항
-
-- **입력**: PDF · HWP · HWPX 위주. 이미지/MS Office 직접 지원 X → **PDF로 래핑 필요**.
-- **호출**: 비동기 전용. `/convert` → polling `/status` → `/download` (zip). `webhook_url` 파라미터 필수 (polling만 써도 더미 URL 전달).
-- **HWPX 응답**: `body[]` 구조 + `posInfo.docPageNum`. **bbox 없음**, 카테고리는 `bodypara/subtitle/none` 수준.
-- **PDF/이미지 응답**: `elements[]` 구조 + `bbox{left,top,width,height}` (포인트 단위) + `pageSizes`. DocTitle/ListText/FigureName/Figure/Table 등 세분화 카테고리.
-- **가격**: 페이지당 10 Credit, 실패 시 환불 (공식 문서 기준).
-
----
-
-자세한 element별 시각 비교는 [comparison 페이지](https://seungeun-hawa.github.io/upstage/dps_dpe_hancom_loader_comparison.html)에서.
+> 한컴 데이터 로더는 공식 페이지에서 **"30여 가지 문서 구성 요소 자동 인식"** + **"규칙 및 AI 기반 문서 구조 분석"**으로 표현. 출력은 aijson 형식 JSON으로 반환되며 RAG·AI 학습 데이터셋 구축 용도로 포지셔닝.
