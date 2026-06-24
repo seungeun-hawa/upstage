@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>Document Parse · 한컴 데이터 로더 비교</title>
+<style>
+  :root {
+    --bg:#f5f6fa; --panel:#fff; --border:#d8dbe3; --muted:#5b6472; --text:#0f172a;
+    --dps:#2563eb; --dpe:#16a34a; --hancom:#db2777;
+    --accent:#0f172a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+
+  header.topbar{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--border);padding:14px 24px 0}
+  .topbar h1{margin:0 0 10px;font-size:18px}
+  .topbar .sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin:0 -24px;padding:0 24px}
+  .tab{flex:0 0 auto;background:none;border:none;border-bottom:3px solid transparent;padding:10px 18px;font-size:14px;cursor:pointer;color:#475569;font-family:inherit;white-space:nowrap;transition:all .12s}
+  .tab:hover{color:#0f172a;background:#f8fafc}
+  .tab.active{color:#0f172a;border-bottom-color:var(--accent);font-weight:600}
+
+  .view{display:none}
+  .view.active{display:block}
+
+  main{max-width:1280px;margin:0 auto;padding:24px}
+
+  /* 표 스타일 */
+  h2{font-size:17px;margin:28px 0 12px;color:var(--text)}
+  h2:first-child{margin-top:0}
+  table{border-collapse:collapse;width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:8px;font-size:13.5px}
+  thead{background:#0f172a;color:#fff}
+  th{padding:11px 14px;text-align:left;font-weight:600;font-size:13px}
+  td{padding:11px 14px;border-top:1px solid var(--border);vertical-align:top}
+  tbody tr:hover{background:#f8fafc}
+  td:first-child{font-weight:500;width:24%;color:#334155}
+  code{background:#f1f5f9;padding:1px 6px;border-radius:3px;font-size:0.9em;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .note{font-size:12.5px;color:var(--muted);padding:8px 12px;background:#fff;border-left:3px solid var(--accent);border-radius:0 4px 4px 0;margin:0 0 18px}
+  .note a{color:var(--accent)}
+
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .legend span{padding:2px 0}
+  .legend b{color:var(--text);font-weight:600;margin-right:4px}
+
+  /* iframe view */
+  .iframe-wrap{height:calc(100vh - 130px);background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .iframe-wrap iframe{width:100%;height:100%;border:none;display:block}
+
+  .openext{display:inline-block;margin-bottom:10px;font-size:13px;color:var(--accent);text-decoration:none;padding:4px 10px;background:#fff;border:1px solid var(--border);border-radius:6px}
+  .openext:hover{background:#f8fafc}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <h1>📊 Document Parse · 한컴 데이터 로더 비교</h1>
+  <p class="sub">DPS · DPE · Hancom 데이터로더 — 공식 사양 + 6개 샘플 실측 결과</p>
+  <div class="tabs">
+    <button class="tab active" data-view="features">📋 기능 비교표</button>
+    <button class="tab" data-view="samples">🔍 샘플별 시각 비교</button>
+  </div>
+</header>
+
+<main>
+  <section class="view active" id="view-features">
+    <div class="note">
+      한컴 데이터 로더 컬럼의 ✅ 표기는 공식 서비스 페이지(<a href="https://sdk.hancom.com/services/1" target="_blank">sdk.hancom.com/services/1</a>) 기준.
+      6개 케이스 실측에서 잘 안 된 항목은 <b>△</b>로 표시.
+    </div>
+
+    <div class="legend">
+      <span><b>✅</b> 지원</span>
+      <span><b>△</b> 공식 ✅ / 실측 불완전</span>
+      <span><b>❌</b> 미지원</span>
+      <span><b>–</b> 명시 없음 / 미확인</span>
+    </div>
+
+    <h2>1. 지원 입력 형식</h2>
+    <table>
+      <thead><tr><th>항목</th><th>DP (Document Parse)</th><th>데이터 로더 (한컴)</th></tr></thead>
+      <tbody>
+        <tr><td>지원 파일 포맷</td><td>PDF, 이미지(JPEG/PNG/TIFF), MS Office(DOCX/PPTX/XLSX), HWP/HWPX</td><td>HWP, HWPX, PDF + 이미지(PNG, JPG, JPEG, BMP)<br><span style="color:var(--muted);font-size:12.5px">※ MS Office 미지원, TIFF 미명시</span></td></tr>
+        <tr><td>지원 언어</td><td>한국어, 영어, 일본어, 중국어(간체)</td><td>한국어 (한글 문서 변환 특화)</td></tr>
+        <tr><td>최대 페이지 / 용량</td><td>동기 API 100p / 비동기 API 1,000p</td><td>100MB · 1,000p 이하 권장</td></tr>
+        <tr><td>호출 방식</td><td>동기 / 비동기</td><td>비동기 전용 (Webhook 또는 polling)</td></tr>
+        <tr><td>출력 포맷</td><td>JSON (<code>content.{html, markdown, text}</code>)</td><td>JSON · CSV · HTML (이미지·차트·표 별도 저장 가능)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>2. 지원 기능</h2>
+    <table>
+      <thead><tr><th>기능</th><th>DPS</th><th>DPE</th><th>데이터 로더 (한컴)</th></tr></thead>
+      <tbody>
+        <tr><td>HWP/HWPX 네이티브 처리</td><td>✅ (HWPX 실측 8.4s / 15 elem)</td><td>✅ (HWPX 실측 10.5s / 15 elem)</td><td>✅ (HWP/HWPX 응답엔 bbox 없음)</td></tr>
+        <tr><td>차트 내용 설명</td><td>❌</td><td>✅ DPE 전용</td><td>△ (Figure 영역만 분리, raw text dump)</td></tr>
+        <tr><td>이미지 내용 설명</td><td>❌</td><td>✅ DPE 전용</td><td>–</td></tr>
+        <tr><td>복잡한 표 (병합·중첩·선 없음)</td><td>기본 (실측 ✅ 중첩 <code>&lt;table&gt;</code> 보존)</td><td>고정밀</td><td>△ (중첩 평탄화 + <code>AL2년→OL2년</code> 등 OCR 오류)</td></tr>
+        <tr><td>차트 데이터 추출</td><td>기본</td><td>고정밀 (실측 ✅ 시리즈명·값 매트릭스)</td><td>△ (값 매핑 불가, 텍스트 덤프)</td></tr>
+        <tr><td>다중 페이지 걸친 표 자동 병합</td><td>기본</td><td>고정밀</td><td>✅ (공식 명시 X, 실측에서 줄없는 표 2개 → 1개로 병합)</td></tr>
+        <tr><td>체크박스 인식</td><td>기본</td><td>고정밀 (실측 ✅ <code>&lt;input type="checkbox"&gt;</code> 마크업)</td><td>– (공식 명시 X)</td></tr>
+        <tr><td>기본 OCR (한·영·일·중 간체)</td><td>✅</td><td>✅</td><td>△ (한국어 OK, 영문 단어 공백 누락 다수: <code>lacksalibrary</code>, <code>theirpotential</code>, <code>ofprefix</code>)</td></tr>
+        <tr><td>좌표 정보 반환 (bbox)</td><td>✅</td><td>✅</td><td>△ (PDF ✅ / HWP·HWPX ❌ — 응답 스키마에 좌표 없음)</td></tr>
+        <tr><td>Reading Order 인식</td><td>✅ (실측 ✅ 다단 영문 정확)</td><td>✅ (실측 ✅)</td><td>△ (영문 다단 단어 분리 약함, HWP는 카테고리 <code>bodypara/subtitle/none</code>로 단순)</td></tr>
+        <tr><td>단순 표 인식</td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td>표 내 이미지/차트 인식</td><td>✅</td><td>✅</td><td>–</td></tr>
+        <tr><td>머리말·꼬리말·각주·미주·페이지 번호 인식</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="view" id="view-samples">
+    <a class="openext" href="dps_dpe_hancom_loader_comparison.html" target="_blank">↗ 새 탭에서 열기</a>
+    <div class="iframe-wrap">
+      <iframe data-src="dps_dpe_hancom_loader_comparison.html" title="샘플별 시각 비교"></iframe>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  const tabs = document.querySelectorAll('.tab');
+  const views = document.querySelectorAll('.view');
+  const iframe = document.querySelector('#view-samples iframe');
+  let iframeLoaded = false;
+
+  function activate(name){
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.view === name));
+    views.forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+    if(name === 'samples' && !iframeLoaded){
+      iframe.src = iframe.dataset.src;
+      iframeLoaded = true;
+    }
+    history.replaceState(null, '', '#' + name);
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.view)));
+
+  const hash = (location.hash || '').replace('#','');
+  activate(hash === 'samples' ? 'samples' : 'features');
+})();
+</script>
+</body>
+</html>
