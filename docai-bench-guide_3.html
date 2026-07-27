@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocAI 벤치마크 리더보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --ink:#191F28; --ink-soft:#6B7684; --bg:#FFFFFF; --panel:#F9FAFB; --line:#E5E8EB;
+  --dp:#6C4CF1; --dpe:#A78BFA; --reducto:#F59E0B;
+  --paddle:#2932E1; --ovis:#16A34A; --mineru:#0891B2; --gray:#6B7280; --llama:#E11D48;
+  --good:#0E8A5F; --warn:#B45309;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--ink);font-size:14.5px;line-height:1.65;font-feature-settings:'tnum'}
+.num,.val,.rank,.t-score,.s-score,.s-rank{font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding:0 28px 88px}
+a{color:var(--dp)}
+
+header{padding:52px 0 22px}
+h1{font-size:clamp(30px,4.6vw,42px);font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:16px}
+h1::before{content:"";width:.5em;height:.5em;background:var(--ink);border-radius:4px;flex:none}
+.lede{margin-top:12px;color:var(--ink-soft);font-size:14px;max-width:860px}
+.lede a{font-weight:700;text-decoration:none;border-bottom:1px solid currentColor}
+.keynote{margin-top:12px;font-size:12px;color:var(--ink-soft)}
+.keynote code{font-size:11px;background:var(--panel);border:1px solid var(--line);padding:1px 6px;border-radius:5px;color:var(--ink);font-weight:600}
+
+.card{border:1px solid var(--line);border-radius:16px;background:var(--bg);overflow:hidden;box-shadow:0 1px 3px rgba(25,31,40,.05)}
+.tabs{display:flex;gap:4px;overflow-x:auto;padding:12px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.tabs button{flex:none;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink-soft);background:none;border:none;border-radius:9px;padding:8px 15px;cursor:pointer;white-space:nowrap}
+.tabs button:hover{color:var(--ink)}
+.tabs button.active{background:#E8EAED;color:var(--ink)}
+.tabs button:focus-visible{outline:2px solid var(--dp);outline-offset:-2px}
+
+.page{display:none;padding:30px 34px 36px}
+.page.active{display:block;animation:fade .22s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.page.active{animation:none}}
+@media(max-width:760px){.page{padding:22px 18px 28px}}
+
+.ph h2{font-size:21px;font-weight:800;letter-spacing:-.01em}
+.ph .sub{color:var(--ink-soft);font-size:13px;margin-top:4px;max-width:760px}
+.ph .sub b{color:var(--ink);font-weight:700}
+.badges{display:flex;gap:6px;margin-top:10px}
+.badge{font-size:10.5px;letter-spacing:.05em;padding:3px 10px;border-radius:6px;font-weight:700}
+.badge.pub{background:#EAF0FE;color:#1D4ED8}
+.badge.priv{background:#FEF0E2;color:#B45309}
+.badge.own{background:#E5F5EC;color:#0E8A5F}
+
+.summary{margin-top:20px;border:1px solid var(--line);border-radius:12px;padding:15px 18px;background:var(--panel)}
+.summary.good{border-left:4px solid var(--good)}
+.summary.warn{border-left:4px solid var(--warn)}
+.summary .v{font-weight:800;font-size:14.5px}
+.summary.good .v{color:var(--good)}
+.summary.warn .v{color:var(--warn)}
+.summary p{margin-top:5px;font-size:13px;color:var(--ink-soft)}
+.summary p b{color:var(--ink)}
+.summary .num{font-weight:700;color:var(--ink)}
+.about{margin-top:14px;font-size:13px;color:var(--ink-soft);max-width:820px}
+.about b{color:var(--ink)}
+.about p+p{margin-top:7px}
+
+/* ── 차트 (가로 리더보드 행) ── */
+.chart-block{margin-top:30px}
+.chart-title{font-size:12px;letter-spacing:.02em;color:var(--ink-soft);margin-bottom:6px;font-weight:600}
+.chart-title b{color:var(--ink);font-weight:800}
+.chart-title .hint{color:var(--dp);font-weight:700}
+.lb{border-top:1px dashed #D6DAE1;padding-top:8px}
+.row{display:grid;grid-template-columns:40px minmax(0,1fr) 112px;gap:12px;align-items:center;padding:7px 6px;cursor:pointer;border-radius:9px}
+.row:hover{background:var(--panel)}
+.row + .row{border-top:1px dashed #EEF0F3}
+.lb.sm .row{grid-template-columns:32px minmax(0,1fr) 64px;padding:6px 4px}
+.rk{font-size:12.5px;font-weight:800;color:var(--ink-soft);text-align:right}
+.rk.r1{color:#D97706}
+.nm{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb.sm .nm{font-size:12.5px}
+.nm.dp{color:var(--dp);font-weight:800}
+.nm.dpe{color:#7C5CF5;font-weight:700}
+.nm.rv{color:#B45309;font-weight:700}
+.bar{height:6px;border-radius:3px;background:#EDEFF3;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px}
+.sc{font-size:13.5px;font-weight:800;text-align:right}
+.sc small{display:block;font-weight:500;font-size:10px;color:var(--ink-soft)}
+.lb.sm .sc{font-size:12px}
+.gaprow{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:2px 6px}
+.lb.sm .gaprow{grid-template-columns:32px 1fr;padding:2px 4px}
+.gaprow .rk{color:#B0B8C1;letter-spacing:2px}
+
+.lang-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:8px}
+@media(max-width:980px){.lang-grid{grid-template-columns:1fr;gap:30px}}
+.lang-grid h4{font-size:14.5px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.lang-grid h4::before{content:"";width:8px;height:8px;background:var(--ink);border-radius:2px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:22px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-soft);font-weight:500}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.footnote{margin-top:12px;font-size:12px;color:var(--ink-soft)}
+.footnote b{color:var(--ink)}
+footer{margin-top:26px;font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
+
+/* 툴팁 */
+#tip{position:fixed;z-index:50;pointer-events:none;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(25,31,40,.15);padding:10px 14px;font-size:12.5px;display:none;max-width:270px}
+#tip .t-name{font-weight:800;display:flex;align-items:center;gap:7px}
+#tip .t-name i{width:9px;height:9px;border-radius:3px;flex:none}
+#tip .t-metric{color:var(--ink-soft);font-size:11.5px;margin-top:2px}
+#tip .t-score{font-weight:800;font-size:15px;margin-top:4px}
+#tip .t-rank{font-size:11.5px;color:var(--ink-soft);font-weight:600}
+#tip .t-cta{margin-top:6px;font-size:10.5px;color:#9AA1AD}
+
+/* 모델 상세 */
+#modelView{display:none;padding:30px 34px 40px}
+#modelView.active{display:block;animation:fade .22s ease}
+@media(max-width:760px){#modelView{padding:22px 18px 28px}}
+.back{font-family:inherit;font-size:13px;font-weight:700;color:var(--ink-soft);background:none;border:1px solid var(--line);border-radius:9px;padding:7px 14px;cursor:pointer}
+.back:hover{color:var(--ink);background:var(--panel)}
+.mv-head{margin-top:20px}
+.mv-meta{font-size:12.5px;color:var(--ink-soft);display:flex;align-items:center;gap:8px;font-weight:500}
+.mv-meta i{width:10px;height:10px;border-radius:3px;flex:none}
+.mv-head h2{font-size:clamp(23px,3.2vw,30px);font-weight:800;margin-top:8px;line-height:1.3;letter-spacing:-.01em}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}
+@media(max-width:860px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.stat-grid{grid-template-columns:1fr}}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.stat .s-top{display:flex;justify-content:space-between;align-items:center}
+.stat .s-label{font-size:12px;font-weight:800;background:#E8EAED;border-radius:999px;padding:3px 11px}
+.stat .s-rank{font-size:12px;color:var(--ink-soft);font-weight:600}
+.stat .s-rank b{color:var(--ink);font-weight:800}
+.stat .s-score{font-size:31px;font-weight:800;margin-top:12px;line-height:1;letter-spacing:-.01em}
+.stat .s-unit{font-size:11px;color:var(--ink-soft);margin-top:4px}
+.stat .s-subs{margin-top:12px;font-size:12px;color:var(--ink-soft)}
+.stat .s-subs .r{display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed #E2E5EB}
+.stat .s-subs .r span:last-child{color:var(--ink);font-weight:700}
+.stat .s-none{margin-top:12px;font-size:12px;color:#9AA1AD}
+.mv-spec{margin-top:26px;border-top:1px solid var(--line);padding-top:18px}
+.mv-spec h3{font-size:16px;font-weight:800;margin-bottom:10px}
+.spec-list{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:6px 18px;max-width:820px}
+.spec-list .sr{display:flex;justify-content:space-between;gap:24px;padding:10px 0;font-size:13px;border-top:1px dashed #E2E5EB}
+.spec-list .sr:first-child{border-top:none}
+.spec-list .sr .k{color:var(--ink-soft);font-weight:600;flex:none}
+.spec-list .sr .vv{text-align:right;font-weight:600;color:var(--ink)}
+.spec-note{margin-top:8px;font-size:11.5px;color:var(--ink-soft)}
+.mv-sum{margin-top:26px;border-top:1px solid var(--line);padding-top:18px}
+.mv-sum h3{font-size:16px;font-weight:800;margin-bottom:8px}
+.mv-sum p{font-size:13.5px;color:var(--ink-soft);max-width:820px}
+.mv-sum p b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>DocAI 벤치마크 리더보드</h1>
+  <p class="lede">벤치마크별 순위와 DP의 경쟁 포지션을 한눈에 보는 페이지입니다. <a href="https://www.notion.so/upstage/Docai-Bench-Hub-390e45d0002580d5bd55f9987a6b251e">Docai-Bench Hub</a>(전체 원본 점수 저장소)를 큐레이션한 문서로, 세부 수치·전체 모델 결과는 허브에서 확인하세요. · 2026-07-27 기준</p>
+  <p class="keynote"><code>DPE V2</code> = document-parse-pro 0.0.2 (0.8B), 현재 공식 기준 버전 · 연구 버전(0.0.3-preview)은 순위 제외, 각주로 표기 · VLM 점수는 측정마다 ±1~2% 변동 정상 · Qwen 계열은 허브 미측정(온보딩 예정)</p>
+</header>
+
+<div class="card">
+
+<nav class="tabs" id="tabs">
+  <button data-page="dpbench" class="active">dp-bench-private</button>
+  <button data-page="omni">OmniDocBench</button>
+  <button data-page="parse">ParseBench</button>
+  <button data-page="kie">KIE-Bench testmini</button>
+  <button data-page="form">KIE-Form Bench</button>
+</nav>
+
+<!-- dp-bench -->
+<section class="page active" id="page-dpbench">
+  <div class="ph">
+    <h2>dp-bench-private v5.3.0</h2>
+    <p class="sub">측정 대상: <b>문서 파싱 전반</b> · 언어별 점수 (EN / KO / JA) · universal 서브셋</p>
+    <div class="badges"><span class="badge priv">PRIVATE</span></div>
+  </div>
+  <div class="summary good">
+    <div class="v">한국어·일본어 압도적 1위, 한일 시장 핵심 소구점</div>
+    <p>KO <span class="num">82.87</span> / JA <span class="num">86.08</span>로 경쟁사 1위 대비 <b>KO +5.0pt / JA +6.9pt</b> 격차. EN은 3위(<span class="num">96.23</span>)지만 1위 PaddleOCR-VL과 −0.88pt 근소차. KO/JA 상위권은 전부 DP 계열.</p>
+  </div>
+  <div class="about">
+    <p>사내에서 자체 구축·관리하는 <b>프라이빗 벤치마크</b>. 레이아웃 검출부터 텍스트 전사까지 문서 파싱 품질 전반을 언어별(EN/KO/JA)로 측정. 외부 공개 벤치가 커버하지 못하는 한국어·일본어 문서 성능을 확인하는 내부 기준선 역할. DP standard는 <b>260128 / 260630</b> 두 버전이며 최신은 260630.</p>
+  </div>
+  <div class="chart-block">
+    <div class="chart-title">언어별 내림차순 · <span class="hint">모델 행을 클릭하면 상세 페이지</span></div>
+    <div class="lang-grid">
+      <div><h4>EN</h4><div data-chart="dp_en" data-sm="1"></div></div>
+      <div><h4>KO</h4><div data-chart="dp_ko" data-sm="1"></div></div>
+      <div><h4>JA</h4><div data-chart="dp_ja" data-sm="1"></div></div>
+    </div>
+    <div class="legend" data-legend></div>
+  </div>
+</section>
+
+<!-- OmniDocBench -->
+<section class="page" id="page-omni">
+  <div class="ph">
+    <h2>OmniDocBench v1.6</h2>
+    <p class="sub">측정 대상: <b>text / table / formula</b> · overall 점수</p>
+    <div class="badges"><span class="badge pub">PUBLIC</span></div>
+  </div>
+  <div class="summary good">
+    <div class="v">DPE V2 5위, 0.8B 경량 모델로 공개 벤치 Top 5 진입해 상위권 추격 중</div>
+    <p>DPE V2 <span class="num">92.32</span>로 Reducto agentic(<span class="num">87.84</span>)을 4.5pt 앞서며 92점대 안착. SOTA OvisOCR2(<span class="num">96.64</span>)와의 격차는 RL 포함 연구 버전(0.0.3-preview)으로 좁혀갈 예정. 손글씨·KO/JA 강점과 함께 제시하면 스토리가 더 강해지는 벤치.</p>
+  </div>
+  <div class="about">
+    <p>문서 파싱 분야에서 가장 널리 인용되는 <b>공개 벤치마크</b>. 다양한 문서 유형에 대해 텍스트 전사(edit distance), 표 구조(TEDS), 수식 인식을 종합 측정. 경쟁사·커뮤니티가 공통으로 참조하기 때문에 <b>외부 커뮤니케이션의 기준점</b>이 되는 벤치. 단, 폼·손글씨 특화 성능은 여기서 드러나지 않음.</p>
+  </div>
+  <div class="chart-block">
+    <div class="chart-title">Overall · 내림차순 · <span class="hint">모델 행을 클릭하면 상세 페이지</span></div>
+    <div data-chart="omni"></div>
+    <p class="footnote"><b>연구 버전(0.0.3-preview)은 92.10으로 DPE V2(92.32)보다 소폭 낮음.</b> ParseBench 위주 학습에 아직 RL 전 단계이기 때문이며, RL 완료 후 정식 반영 예정.</p>
+  </div>
+</section>
+
+<!-- ParseBench -->
+<section class="page" id="page-parse">
+  <div class="ph">
+    <h2>ParseBench v0.2</h2>
+    <p class="sub">측정 대상: <b>table / chart / content / format / layout</b></p>
+    <div class="badges"><span class="badge pub">PUBLIC</span></div>
+  </div>
+  <div class="summary good">
+    <div class="v">DPE V2 5위, 연구 버전(0.0.3)이 +12pt 급상승한 R&amp;D 집중 벤치</div>
+    <p>연구 버전(0.0.3-preview)이 <span class="num">62.24 → 74.27</span>로 급상승해 <b>2위 수준</b> 도달. SOTA LlamaParse Agentic(<span class="num">84.9</span>)과의 격차를 빠르게 좁히는 중.</p>
+  </div>
+  <div class="about">
+    <p>표·차트·콘텐츠·포맷·레이아웃 등 <b>구조화 파싱 품질</b>을 세부 항목별로 측정하는 공개 벤치마크. 특히 차트 해석(chart)과 출력 포맷 정확도(format)에서 모델 간 격차가 크게 벌어져, 단순 OCR을 넘어선 문서 이해 능력을 가르는 벤치.</p>
+  </div>
+  <div class="chart-block">
+    <div class="chart-title">Overall · 내림차순 · <span class="hint">모델 행을 클릭하면 상세 페이지</span></div>
+    <div data-chart="parse"></div>
+    <p class="footnote"><b>연구 버전(0.0.3-preview)</b>은 ParseBench 위주로 학습되어 <b>74.27(2위 수준)</b> 도달. 정식 릴리즈 시 순위 반영 예정.</p>
+  </div>
+</section>
+
+<!-- KIE -->
+<section class="page" id="page-kie">
+  <div class="ph">
+    <h2>KIE-Bench v1.1.1.1 testmini</h2>
+    <p class="sub">측정 대상: <b>정보추출(KIE) 성능</b> · 점수 = exact / semantic</p>
+    <div class="badges"><span class="badge pub">PUBLIC</span></div>
+  </div>
+  <div class="summary warn">
+    <div class="v">DPE V2 3위, 1위 Reducto agentic과 3.2pt 격차. KIE 어필은 보수적으로</div>
+    <p>Reducto agentic <span class="num">83.04 / 86.70</span> vs <b>DPE V2</b> <span class="num">79.88 / 83.49</span> (3위). DP standard 260630도 79.74 / 84.26으로 5위. 2~6위가 2pt 안에 몰려 있는 접전 구간.</p>
+  </div>
+  <div class="about">
+    <p>문서에서 특정 필드 값을 뽑아내는 <b>Key Information Extraction</b> 성능 벤치. exact(정확 일치)와 semantic(의미 일치) 두 기준으로 채점. KIE-Bench 자체는 여러 서브셋으로 나뉘어 있고 전체 오버롤 개념이 없어, <b>커뮤니티 표준인 testmini 서브셋</b> 하나만 관리 대상으로 삼음.</p>
+  </div>
+  <div class="chart-block">
+    <div class="chart-title">exact · 내림차순 <b>(작은 숫자 = semantic)</b> · <span class="hint">모델 행을 클릭하면 상세 페이지</span></div>
+    <div data-chart="kie"></div>
+  </div>
+</section>
+
+<!-- form -->
+<section class="page" id="page-form">
+  <div class="ph">
+    <h2>KIE-Form Bench v1.4.1</h2>
+    <p class="sub">측정 대상: <b>손글씨 / 체크박스</b> · 언어별 (EN / KO / JA)</p>
+    <div class="badges"><span class="badge own">자체 제작</span></div>
+  </div>
+  <div class="summary good">
+    <div class="v">손글씨 전 언어 1위, 체크박스 0.71pt 차 2위. 폼(양식) 문서 처리의 핵심 강점 벤치</div>
+    <p><b>손글씨:</b> DP standard 260630이 EN·KO·JA 모두 1위 (overall <span class="num">93.47</span>, Reducto <span class="num">91.98</span> 제침), 폼·수기 문서 시장의 확실한 차별점. <b>체크박스:</b> DP <span class="num">94.24</span>로 Reducto(<span class="num">94.95</span>)와 사실상 동률 수준의 2위. 단, EN 체크박스는 Reducto가 99.42로 앞서 있어 항목 단위 인용 시 참고.</p>
+  </div>
+  <div class="about">
+    <p>손글씨가 포함된 폼 데이터 + 플리토 EN·KO·JA OCR GT 데이터셋을 모아 <b>KIE 질의 형태로 재구성한 자체 벤치마크</b>. KIE-Bench와 데이터가 완전히 별개.</p>
+    <p><b>왜 따로 만들었나:</b> OmniDocBench나 dp-bench의 텍스트 OCR 점수는 폼 전체 글씨(프린트+손글씨)의 전사 성능만 보여줘서 손글씨만의 성능을 볼 수 없음. 손글씨 항목만 추출해 "이름을 뭐라고 썼어?" 식으로 질의하면 정답 여부가 곧 손글씨 인식 성능이 됨. <b>손글씨를 제대로 재는 거의 유일한 지표.</b></p>
+  </div>
+  <div class="chart-block">
+    <div class="chart-title"><b>손글씨</b> · 언어별 내림차순 · <span class="hint">모델 행을 클릭하면 상세 페이지</span></div>
+    <div class="lang-grid">
+      <div><h4>EN</h4><div data-chart="hw_en" data-sm="1"></div></div>
+      <div><h4>KO</h4><div data-chart="hw_ko" data-sm="1"></div></div>
+      <div><h4>JA</h4><div data-chart="hw_ja" data-sm="1"></div></div>
+    </div>
+    <p class="footnote">Reducto parse v3는 이 벤치 미측정.</p>
+  </div>
+  <div class="chart-block">
+    <div class="chart-title"><b>체크박스</b> · 언어별 내림차순 · <span class="hint">모델 행을 클릭하면 상세 페이지</span></div>
+    <div class="lang-grid">
+      <div><h4>EN</h4><div data-chart="cb_en" data-sm="1"></div></div>
+      <div><h4>KO</h4><div data-chart="cb_ko" data-sm="1"></div></div>
+      <div><h4>JA</h4><div data-chart="cb_ja" data-sm="1"></div></div>
+    </div>
+    <div class="legend" data-legend></div>
+  </div>
+</section>
+
+<!-- 모델 상세 -->
+<section id="modelView">
+  <button class="back" id="backBtn">← 리더보드로 돌아가기</button>
+  <div class="mv-head">
+    <div class="mv-meta" id="mvMeta"></div>
+    <h2 id="mvName"></h2>
+  </div>
+  <div class="stat-grid" id="mvStats"></div>
+  <div class="mv-spec">
+    <h3>Technical specifications</h3>
+    <div class="spec-list" id="mvSpec"></div>
+  </div>
+  <div class="mv-sum">
+    <h3>Summary</h3>
+    <p id="mvSum"></p>
+  </div>
+</section>
+
+</div>
+
+</div>
+
+<div id="tip"></div>
+
+<script>
+/* ───────── 데이터 (Docai-Bench Hub 기준) ───────── */
+const GROUPS = {
+  dp:      {color:'var(--dp)',      label:'DP standard / enhanced', lcls:'dp'},
+  dpe:     {color:'var(--dpe)',     label:'DPE V2', lcls:'dpe'},
+  reducto: {color:'var(--reducto)', label:'Reducto', lcls:'rv'},
+  paddle:  {color:'var(--paddle)',  label:'PaddleOCR-VL', lcls:''},
+  ovis:    {color:'var(--ovis)',    label:'OvisOCR2', lcls:''},
+  mineru:  {color:'var(--mineru)',  label:'MinerU2.5', lcls:''},
+  llama:   {color:'var(--llama)',   label:'LlamaParse', lcls:''},
+  other:   {color:'var(--gray)',    label:'기타', lcls:''}
+};
+
+const MODELS = {
+  'paddle':   {name:'PaddleOCR-VL 1.6', short:'Paddle<br>OCR-VL', group:'paddle', provider:'Baidu', type:'공개 모델',
+    s:{dp_en:97.11,dp_ko:77.41,dp_ja:78.88,omni:96.25,parse:68.99,kie_ex:69.30,kie_se:73.74,hw_en:82.15,hw_ko:65.96,hw_ja:66.38,hw_ov:71.70,cb_en:90.36,cb_ko:80.95,cb_ja:56.49,cb_ov:75.06}},
+  'ovis':     {name:'OvisOCR2', short:'Ovis<br>OCR2', group:'ovis', provider:'Alibaba', type:'공개 모델',
+    s:{dp_en:97.10,dp_ko:75.42,dp_ja:79.19,omni:96.64,parse:42.64,kie_ex:79.76,kie_se:83.10,hw_en:86.12,hw_ko:62.74,hw_ja:79.83,hw_ov:76.45,cb_en:54.63,cb_ko:62.17,cb_ja:40.11,cb_ov:50.20}},
+  'unlimited':{name:'Unlimited-OCR', short:'Unlimited', group:'other', provider:'Baidu', type:'공개 모델',
+    s:{dp_en:96.21,dp_ko:71.11,dp_ja:76.72,omni:92.47,parse:58.55,kie_ex:74.79,kie_se:78.08,hw_en:73.22,hw_ko:40.16,hw_ja:59.48,hw_ov:57.95,cb_en:54.63,cb_ko:70.00,cb_ja:39.92,cb_ov:51.56}},
+  'mineru':   {name:'MinerU2.5-Pro', short:'MinerU<br>2.5', group:'mineru', provider:'OpenDataLab', type:'공개 모델',
+    s:{dp_en:95.98,dp_ko:77.58,dp_ja:79.17,omni:95.66,parse:61.08,kie_ex:81.31,kie_se:84.59,hw_en:85.30,hw_ko:58.77,hw_ja:77.20,hw_ov:74.01,cb_en:76.88,cb_ko:75.65,cb_ja:47.90,cb_ov:65.04}},
+  'monkeys':  {name:'MonkeyOCR v2-s parsing', short:'Monkey<br>OCR-s', group:'other', provider:'—', type:'공개 모델',
+    s:{dp_en:92.55,dp_ko:66.92,dp_ja:75.48,omni:91.37,parse:56.73,kie_ex:67.20,kie_se:70.42,hw_en:57.86,hw_ko:55.21,hw_ja:58.42,hw_ov:57.18,cb_en:48.66,cb_ko:60.17,cb_ja:33.27,cb_ov:44.63}},
+  'monkeyb':  {name:'MonkeyOCR v2-b parsing', short:'Monkey<br>OCR-b', group:'other', provider:'—', type:'공개 모델',
+    s:{dp_en:92.24,dp_ko:66.68,dp_ja:75.18,omni:91.19,parse:57.26,kie_ex:70.63,kie_se:73.86,hw_en:61.27,hw_ko:58.72,hw_ja:63.03,hw_ov:61.02,cb_en:54.13,cb_ko:55.41,cb_ja:38.12,cb_ov:47.96}},
+  'monkeyp':  {name:'MonkeyOCR-Pro 3B', short:'Monkey<br>Pro', group:'other', provider:'—', type:'공개 모델',
+    s:{dp_en:91.42,dp_ko:58.78,dp_ja:71.39,omni:91.02,parse:39.56,kie_ex:65.40,kie_se:70.93,hw_en:78.11,hw_ko:58.02,hw_ja:63.55,hw_ov:66.80,cb_en:52.40,cb_ko:48.47,cb_ja:42.75,cb_ov:47.78}},
+  'rparse':   {name:'Reducto Parse v3', short:'Reducto<br>parse', group:'reducto', provider:'Reducto', type:'상용 API',
+    s:{dp_en:92.56,dp_ko:69.65,dp_ja:75.44,omni:67.22,parse:72.12,kie_ex:79.31,kie_se:84.16,hw_en:null,hw_ko:null,hw_ja:null,hw_ov:null,cb_en:null,cb_ko:null,cb_ja:null,cb_ov:null}},
+  'ragentic': {name:'Reducto Agentic v3', short:'Reducto<br>agentic', group:'reducto', provider:'Reducto', type:'상용 API',
+    s:{dp_en:80.09,dp_ko:60.49,dp_ja:65.00,omni:87.84,parse:78.55,kie_ex:83.04,kie_se:86.70,hw_en:91.18,hw_ko:92.69,hw_ja:92.13,hw_ov:91.98,cb_en:99.42,cb_ko:91.77,cb_ja:91.80,cb_ov:94.95}},
+  'llama':    {name:'LlamaParse Agentic', short:'LlamaParse<br>Agentic', group:'llama', provider:'LlamaIndex', type:'상용 API · ParseBench SOTA',
+    s:{dp_en:null,dp_ko:null,dp_ja:null,omni:null,parse:84.9,kie_ex:null,kie_se:null,hw_en:null,hw_ko:null,hw_ja:null,hw_ov:null,cb_en:null,cb_ko:null,cb_ja:null,cb_ov:null}},
+  'std128':   {name:'DP standard 260128', short:'DP std<br>260128', group:'dp', provider:'Upstage', type:'DP standard (1/28 릴리즈)',
+    s:{dp_en:95.78,dp_ko:81.98,dp_ja:85.93,omni:72.94,parse:49.04,kie_ex:78.25,kie_se:83.11,hw_en:92.59,hw_ko:92.88,hw_ja:90.75,hw_ov:92.08,cb_en:78.08,cb_ko:81.30,cb_ja:74.05,cb_ov:77.06}},
+  'enh128':   {name:'DP enhanced 260128', short:'DP enh<br>260128', group:'dp', provider:'Upstage', type:'DP enhanced (1/28 릴리즈)',
+    s:{dp_en:95.67,dp_ko:82.20,dp_ja:84.18,omni:71.84,parse:59.49,kie_ex:76.76,kie_se:81.74,hw_en:88.00,hw_ko:91.86,hw_ja:88.49,hw_ov:89.41,cb_en:72.05,cb_ko:80.87,cb_ja:67.13,cb_ov:71.70}},
+  'std630':   {name:'DP standard 260630', short:'DP std<br>260630', group:'dp', provider:'Upstage', type:'DP standard (6/30 릴리즈, 최신)',
+    s:{dp_en:96.23,dp_ko:82.55,dp_ja:86.08,omni:72.79,parse:49.31,kie_ex:79.74,kie_se:84.26,hw_en:93.48,hw_ko:93.89,hw_ja:93.05,hw_ov:93.47,cb_en:98.84,cb_ko:91.34,cb_ja:90.80,cb_ov:94.24}},
+  'enh630':   {name:'DP enhanced 260630', short:'DP enh<br>260630', group:'dp', provider:'Upstage', type:'DP enhanced (6/30 릴리즈, 최신)',
+    s:{dp_en:95.19,dp_ko:82.87,dp_ja:84.12,omni:71.68,parse:59.54,kie_ex:78.62,kie_se:83.08,hw_en:92.35,hw_ko:93.11,hw_ja:91.78,hw_ov:92.41,cb_en:96.14,cb_ko:91.56,cb_ja:80.91,cb_ov:89.18}},
+  'dpev2':    {name:'DPE V2 (document-parse-pro 0.0.2)', short:'DPE V2', group:'dpe', provider:'Upstage', type:'VLM 기반 all-in-one · 0.8B · 공식 기준 버전',
+    s:{dp_en:90.20,dp_ko:59.94,dp_ja:66.96,omni:92.32,parse:62.24,kie_ex:79.88,kie_se:83.49,hw_en:86.12,hw_ko:75.75,hw_ja:79.58,hw_ov:80.61,cb_en:89.19,cb_ko:73.16,cb_ja:62.67,cb_ov:75.60}}
+};
+
+const METRICS = {
+  dp_en:{bench:'dp-bench-private', label:'dp-bench EN'}, dp_ko:{bench:'dp-bench-private', label:'dp-bench KO'}, dp_ja:{bench:'dp-bench-private', label:'dp-bench JA'},
+  omni:{bench:'OmniDocBench v1.6', label:'OmniDocBench'}, parse:{bench:'ParseBench v0.2', label:'ParseBench'},
+  kie_ex:{bench:'KIE-Bench testmini', label:'KIE exact'},
+  hw_en:{bench:'KIE-Form Bench 손글씨', label:'손글씨 EN'}, hw_ko:{bench:'KIE-Form Bench 손글씨', label:'손글씨 KO'}, hw_ja:{bench:'KIE-Form Bench 손글씨', label:'손글씨 JA'}, hw_ov:{bench:'KIE-Form Bench 손글씨', label:'손글씨 overall'},
+  cb_en:{bench:'KIE-Form Bench 체크박스', label:'체크박스 EN'}, cb_ko:{bench:'KIE-Form Bench 체크박스', label:'체크박스 KO'}, cb_ja:{bench:'KIE-Form Bench 체크박스', label:'체크박스 JA'}, cb_ov:{bench:'KIE-Form Bench 체크박스', label:'체크박스 overall'}
+};
+
+function rankOf(id, metric){
+  const vals = Object.entries(MODELS).filter(([k,m])=>m.s[metric]!=null).sort((a,b)=>b[1].s[metric]-a[1].s[metric]);
+  const idx = vals.findIndex(([k])=>k===id);
+  return idx<0 ? null : {rank:idx+1, total:vals.length};
+}
+
+const CHARTS = {
+  dp_en:{metric:'dp_en', ids:['paddle','ovis','std630','unlimited','mineru','rparse','dpev2','ragentic']},
+  dp_ko:{metric:'dp_ko', ids:['enh630','std630','enh128','std128','mineru','paddle','rparse','ragentic','dpev2']},
+  dp_ja:{metric:'dp_ja', ids:['std630','std128','enh128','enh630','ovis','paddle','rparse','dpev2','ragentic']},
+  omni:{metric:'omni', ids:['ovis','paddle','mineru','unlimited','dpev2','monkeys','ragentic','std630','rparse'], sota:'ovis'},
+  parse:{metric:'parse', ids:['llama','ragentic','rparse','paddle','dpev2','mineru','enh630','std630'], sota:'llama'},
+  kie:{metric:'kie_ex', sub:'kie_se', ids:['ragentic','mineru','dpev2','ovis','std630','rparse','enh630','paddle'], sota:'ragentic'},
+  hw_en:{metric:'hw_en', ids:['std630','std128','enh630','ragentic','enh128','dpev2','ovis','paddle']},
+  hw_ko:{metric:'hw_ko', ids:['std630','enh630','std128','ragentic','enh128','dpev2','paddle','ovis']},
+  hw_ja:{metric:'hw_ja', ids:['std630','ragentic','enh630','std128','enh128','ovis','dpev2','paddle']},
+  cb_en:{metric:'cb_en', ids:['ragentic','std630','enh630','paddle','dpev2','std128','mineru']},
+  cb_ko:{metric:'cb_ko', ids:['ragentic','enh630','std630','std128','paddle','mineru','dpev2']},
+  cb_ja:{metric:'cb_ja', ids:['ragentic','std630','enh630','std128','enh128','dpev2','paddle']}
+};
+
+/* ── 차트 렌더: 가로 리더보드 행 + 순위 + 건너뛴 구간 ··· ── */
+function renderCharts(){
+  document.querySelectorAll('[data-chart]').forEach(el=>{
+    const cfg = CHARTS[el.dataset.chart];
+    const sm = el.dataset.sm==='1';
+    const list = document.createElement('div');
+    list.className = 'lb'+(sm?' sm':'');
+    let prevRank = 0;
+    cfg.ids.forEach(id=>{
+      const m = MODELS[id], g = GROUPS[m.group];
+      const v = m.s[cfg.metric];
+      const r = rankOf(id, cfg.metric);
+      if (prevRank && r.rank - prevRank > 1){
+        const gap = document.createElement('div');
+        gap.className = 'gaprow';
+        gap.innerHTML = '<span class="rk">···</span><span></span>';
+        list.appendChild(gap);
+      }
+      prevRank = r.rank;
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.dataset.model = id; row.dataset.metric = cfg.metric;
+      const name = m.short.replace('<br>',' ');
+      const sub = cfg.sub!=null && m.s[cfg.sub]!=null ? '<small>semantic '+m.s[cfg.sub].toFixed(2)+'</small>'
+                : (cfg.sota===id?'<small>SOTA</small>':'');
+      row.innerHTML =
+        '<span class="rk'+(r.rank===1?' r1':'')+'">'+r.rank+'위</span>'
+        + '<div><div class="nm '+g.lcls+'">'+name+'</div><div class="bar"><i style="width:'+v+'%;background:'+g.color+'"></i></div></div>'
+        + '<span class="sc">'+(v%1===0?v.toFixed(1):v.toFixed(2))+sub+'</span>';
+      list.appendChild(row);
+    });
+    el.appendChild(list);
+  });
+  document.querySelectorAll('[data-legend]').forEach(el=>{
+    el.innerHTML = ['dp','dpe','reducto','paddle','ovis','mineru','other'].map(k=>'<span><i style="background:'+GROUPS[k].color+'"></i>'+GROUPS[k].label+'</span>').join('');
+  });
+}
+
+/* ── 툴팁 ── */
+const tip = document.getElementById('tip');
+document.addEventListener('mousemove', e=>{
+  const t = e.target.closest('[data-model]');
+  if(!t){ tip.style.display='none'; return; }
+  const m = MODELS[t.dataset.model], g = GROUPS[m.group], mt = METRICS[t.dataset.metric];
+  const v = m.s[t.dataset.metric];
+  const r = rankOf(t.dataset.model, t.dataset.metric);
+  tip.innerHTML = '<div class="t-name"><i style="background:'+g.color+'"></i>'+m.name+'</div>'
+    + '<div class="t-metric">'+mt.bench+' · '+mt.label+'</div>'
+    + '<div class="t-score">'+v.toFixed(2)+' <span class="t-rank">'+r.rank+'위 / '+r.total+'개 모델</span></div>'
+    + '<div class="t-cta">클릭하면 모델 상세 페이지</div>';
+  tip.style.display='block';
+  const pad=14, w=tip.offsetWidth, h=tip.offsetHeight;
+  let x=e.clientX+pad, y=e.clientY+pad;
+  if(x+w>window.innerWidth-8) x=e.clientX-w-pad;
+  if(y+h>window.innerHeight-8) y=e.clientY-h-pad;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+});
+
+/* ── 모델 상세 ── */
+const CARD_DEFS = [
+  {label:'dp-bench', metric:'dp_en', subs:[['EN','dp_en'],['KO','dp_ko'],['JA','dp_ja']], rankBy:'dp_ko', rankNote:'KO 기준'},
+  {label:'OmniDocBench', metric:'omni', subs:[], rankBy:'omni'},
+  {label:'ParseBench', metric:'parse', subs:[], rankBy:'parse'},
+  {label:'KIE testmini', metric:'kie_ex', subs:[['exact','kie_ex'],['semantic','kie_se']], rankBy:'kie_ex', rankNote:'exact 기준'},
+  {label:'손글씨', metric:'hw_ov', subs:[['EN','hw_en'],['KO','hw_ko'],['JA','hw_ja']], rankBy:'hw_ov', rankNote:'overall 기준'},
+  {label:'체크박스', metric:'cb_ov', subs:[['EN','cb_en'],['KO','cb_ko'],['JA','cb_ja']], rankBy:'cb_ov', rankNote:'overall 기준'}
+];
+let lastTab = 'dpbench';
+
+/* ── 기술 사양 (2026-07 조사 기준: 공식 pricing/기술문서·arXiv) ── */
+const SPECS = {
+  std128:{params:'비공개', arch:'OCR + 레이아웃 파이프라인', license:'상용 API (Upstage)', deploy:'API · AWS Marketplace · 온프렘', price:'Parse $0.01/page (프로모션가 · 정가 $0.03) · AWS $17/hr 또는 $3,000/월', speed:'~0.6초/page'},
+  enh128:{params:'비공개', arch:'Standard + VLM 보강 (표·차트 심층 해석)', license:'상용 API (Upstage)', deploy:'API · AWS Marketplace · 온프렘', price:'Parse $0.01/page (프로모션가 · 정가 $0.03)', speed:'—'},
+  std630:{params:'비공개', arch:'OCR + 레이아웃 파이프라인 (Stable DINO · ocr-3.0)', license:'상용 API (Upstage)', deploy:'API · AWS Marketplace · 온프렘', price:'Parse $0.01/page (프로모션가 · 정가 $0.03) · AWS $17/hr 또는 $3,000/월', speed:'~0.6초/page'},
+  enh630:{params:'비공개', arch:'Standard + VLM 보강 (표·차트 심층 해석)', license:'상용 API (Upstage)', deploy:'API · AWS Marketplace · 온프렘', price:'Parse $0.01/page (프로모션가 · 정가 $0.03)', speed:'—'},
+  dpev2:{params:'0.8B', arch:'VLM 기반 end-to-end (all-in-one)', license:'내부 개발 · 공식 기준 버전', deploy:'출시 준비 중 (GA 목표)', price:'미정', speed:'—'},
+  rparse:{params:'비공개', arch:'OCR + VLM 멀티패스 파이프라인', license:'상용 API (Reducto)', deploy:'SaaS · VPC · 온프렘(Enterprise)', price:'크레딧제 $0.015/credit · Parse 1~4 credits/page (≈$0.015~0.06/page)', speed:'—'},
+  ragentic:{params:'비공개', arch:'VLM 에이전트 루프 (agentic OCR · 상위 과금)', license:'상용 API (Reducto)', deploy:'SaaS · VPC · 온프렘(Enterprise)', price:'크레딧제 · agentic 모드는 표준 대비 상위 과금 (Parse 기준 ≈$0.015~0.06/page)', speed:'—'},
+  llama:{params:'— (멀티모델 오케스트레이션)', arch:'에이전트 파싱 (Agentic / Agentic Plus tier)', license:'상용 SaaS (LlamaCloud)', deploy:'SaaS · 엔터프라이즈 VPC · AWS/Azure Marketplace', price:'크레딧제 · Agentic 10 credits/page, Agentic Plus 45 credits/page (1,000 credits ≈ $1~1.25)', speed:'—'},
+  ovis:{params:'0.8B', arch:'Qwen3.5-0.8B 포스트트레이닝 end-to-end (SFT+RL+증류)', license:'오픈소스 (Apache 2.0, Alibaba)', deploy:'셀프호스팅 (vLLM 지원)', price:'무료 (자체 서빙 비용만)', speed:'—', note:'2026-07-24 공개 · 자체 보고 OmniDocBench 96.58'},
+  paddle:{params:'약 0.9B', arch:'NaViT 비전 인코더 + ERNIE 소형 LM', license:'오픈소스 (Apache 2.0, Baidu)', deploy:'셀프호스팅', price:'무료 (자체 서빙 비용만)', speed:'—'},
+  mineru:{params:'1.2B급 VLM', arch:'end-to-end VLM 파싱', license:'오픈소스 (OpenDataLab)', deploy:'셀프호스팅', price:'무료 (자체 서빙 비용만)', speed:'—'},
+  monkeys:{params:'비공개 (소형)', arch:'구조 인식 파싱 (학술)', license:'오픈소스 (학술)', deploy:'셀프호스팅', price:'무료', speed:'—'},
+  monkeyb:{params:'비공개 (소형)', arch:'구조 인식 파싱 (학술)', license:'오픈소스 (학술)', deploy:'셀프호스팅', price:'무료', speed:'—'},
+  monkeyp:{params:'3B', arch:'구조 인식 파싱 (학술)', license:'오픈소스 (학술)', deploy:'셀프호스팅', price:'무료', speed:'—'},
+  unlimited:{params:'3B MoE (활성 0.5B)', arch:'DeepSeek-OCR 계열 + R-SWA (수십 페이지 원샷 파싱, KV 캐시 고정)', license:'오픈소스 (MIT, Baidu)', deploy:'셀프호스팅 (vLLM · SGLang 지원)', price:'무료 (자체 서빙 비용만)', speed:'—', note:'2026-06-22 공개 · arXiv 2606.23050 · 장문서 원샷 파싱 특화'}
+};
+const SPEC_KEYS = [['params','파라미터 규모'],['arch','아키텍처 / 방식'],['license','라이선스 · 제공 형태'],['deploy','배포 옵션'],['price','가격'],['speed','처리 속도']];
+
+function showModel(id, push=true){
+  const m = MODELS[id], g = GROUPS[m.group];
+  document.getElementById('mvMeta').innerHTML = '<i style="background:'+g.color+'"></i>'+m.provider+' · '+m.type;
+  document.getElementById('mvName').textContent = m.name;
+  const stats = document.getElementById('mvStats');
+  stats.innerHTML='';
+  const highs=[], lows=[];
+  CARD_DEFS.forEach(cd=>{
+    const v = m.s[cd.metric];
+    const card = document.createElement('div');
+    card.className='stat';
+    if(v==null){
+      card.innerHTML = '<div class="s-top"><span class="s-label">'+cd.label+'</span></div><div class="s-none">미측정</div>';
+    } else {
+      const r = rankOf(id, cd.rankBy);
+      const subsHtml = cd.subs.filter(([n,k])=>m.s[k]!=null).map(([n,k])=>'<div class="r"><span>'+n+'</span><span>'+m.s[k].toFixed(2)+'</span></div>').join('');
+      card.innerHTML = '<div class="s-top"><span class="s-label">'+cd.label+'</span><span class="s-rank"><b>'+r.rank+'위</b> / '+r.total+(cd.rankNote?' · '+cd.rankNote:'')+'</span></div>'
+        + '<div class="s-score" style="color:'+g.color+'">'+v.toFixed(2)+'</div>'
+        + '<div class="s-unit">'+(cd.subs.length? '' : 'overall')+'</div>'
+        + (subsHtml? '<div class="s-subs">'+subsHtml+'</div>':'');
+      if(r.rank<=3) highs.push(cd.label+' '+r.rank+'위');
+      if(r.rank>=r.total-2) lows.push(cd.label+' '+r.rank+'위');
+    }
+    stats.appendChild(card);
+  });
+  const sp = SPECS[id] || {};
+  const specEl = document.getElementById('mvSpec');
+  specEl.innerHTML = SPEC_KEYS.map(([k,label])=>'<div class="sr"><span class="k">'+label+'</span><span class="vv">'+(sp[k]||'—')+'</span></div>').join('')
+    + (sp.note? '<div class="sr"><span class="k">비고</span><span class="vv">'+sp.note+'</span></div>':'');
+  specEl.insertAdjacentHTML('afterend','');
+
+  let sum = '<b>'+m.name+'</b>은(는) 허브 측정 지표 중 ';
+  sum += highs.length ? '<b>'+highs.join(', ')+'</b>에서 상위권' : '상위권 지표 없음';
+  sum += lows.length ? ' · '+lows.join(', ')+'에서 하위권.' : '.';
+  if(sp.license) sum += ' 제공 형태는 '+sp.license+'이며, 배포는 '+(sp.deploy||'—')+'.';
+  sum += ' 세부 항목·원본 결과는 Docai-Bench Hub 참조. 가격·사양은 2026-07 공개 자료 기준이므로 인용 전 최신 확인 권장.';
+  document.getElementById('mvSum').innerHTML = sum;
+
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tabs').style.display='none';
+  document.getElementById('modelView').classList.add('active');
+  tip.style.display='none';
+  if(push) history.pushState({model:id}, '');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function closeModelView(){
+  document.getElementById('modelView').classList.remove('active');
+  document.getElementById('tabs').style.display='flex';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+lastTab).classList.add('active');
+}
+document.getElementById('backBtn').addEventListener('click', ()=>{
+  if(history.state && history.state.model) history.back();
+  else closeModelView();
+});
+window.addEventListener('popstate', (e)=>{
+  if(e.state && e.state.model) showModel(e.state.model, false);
+  else closeModelView();
+});
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-model]');
+  if(t) showModel(t.dataset.model);
+});
+
+/* ── 탭 ── */
+const tabs = document.getElementById('tabs');
+tabs.addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-page]');
+  if(!btn) return;
+  lastTab = btn.dataset.page;
+  tabs.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('modelView').classList.remove('active');
+  document.getElementById('page-'+btn.dataset.page).classList.add('active');
+});
+
+renderCharts();
+</script>
+</body>
+</html>
